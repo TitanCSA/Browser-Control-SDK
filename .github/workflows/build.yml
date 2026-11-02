@@ -1,0 +1,23 @@
+name: Build native browser and SDK
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-x64:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Build and run local protocol validation
+        shell: powershell
+        run: .\Build.ps1 -Test
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: browser-control-windows-x64
+          path: obj/Build/bin/Release/*.exe
+          if-no-files-found: error

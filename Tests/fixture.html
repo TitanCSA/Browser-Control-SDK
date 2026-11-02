@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browser Control SDK - Local Automation Fixture</title>
+<style>
+  :root{color-scheme:light;font:16px system-ui;color:#142439;background:#edf2f8}
+  body{margin:0}header{padding:28px 44px;background:#142439;color:white}
+  header small{color:#b2c5dd}h1{margin:0 0 8px;font-size:27px}
+  main{max-width:960px;margin:26px auto;padding:0 24px}
+  section{background:white;border:1px solid #d5dfed;border-radius:14px;padding:22px;margin:18px 0}
+  label{display:block;margin:12px 0 5px}input,textarea,select,button{font:inherit;border:1px solid #bbcce0;border-radius:8px;padding:9px 12px}
+  input[type=text],textarea{width:320px}button,a.action{background:#1767e8;color:white;cursor:pointer;margin:10px 6px 0 0}
+  button:disabled{background:#c2cede;cursor:default}.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+  #result{padding:12px;border-radius:8px;background:#edf2f8;min-height:20px}
+  #pointer{height:100px;background:#edf2f8;display:grid;place-items:center;border:1px dashed #1767e8;border-radius:10px}
+  .block{height:180px;padding:18px;border-radius:10px;border:1px solid #d5dfed;background:#edf2f8;margin:18px 0}
+  #editor{border:1px solid #bbcce0;border-radius:8px;padding:12px;min-height:40px}
+  footer{padding:32px;color:#53667d;text-align:center}
+</style>
+<header><h1>Browser Control SDK</h1><small>Owned localhost test page - no accounts, external scripts or trackers</small></header>
+<main>
+  <section><h2>Form automation</h2><div class="row"><div>
+    <label for="name">Your name</label><input id="name" type="text" aria-label="Your name" placeholder="Enter a name">
+    <label for="email">Email</label><input id="email" type="email" placeholder="test@example.invalid">
+    <label for="password">Password value must be redacted in snapshots</label><input id="password" type="password" value="LOCAL-FIXTURE-PASSWORD-NOT-A-CREDENTIAL">
+    <input id="hidden-field" type="hidden" value="LOCAL-HIDDEN-FIXTURE">
+  </div><div>
+    <label><input id="agree" type="checkbox"> Enable the example option</label>
+    <label for="mode">Mode</label><select id="mode"><option value="linear">Linear</option><option value="curve">Custom curve</option></select>
+    <button id="save">Save example</button><button id="disabled" disabled>Unavailable</button>
+    <p id="result" role="status">Nothing submitted</p>
+  </div></div></section>
+  <section><h2>Keyboard, pointer and DOM changes</h2>
+    <label for="editor">Editable text</label><div id="editor" contenteditable="true" role="textbox" aria-label="Editable text"></div>
+    <p id="key-result">No key event</p><div id="pointer" role="button" tabindex="0" aria-label="Pointer target">Pointer target</div>
+    <button id="delayed">Create delayed content</button><div id="async-container"></div>
+    <button id="replace">Replace a node</button><button id="replace-target">Original node</button>
+  </section>
+  <section><h2>Navigation, cookies and files</h2>
+    <a id="navigation" href="/second">Open second local page</a>
+    <a id="download" href="/download" download="browser-control-example.txt">Download a local text file</a>
+    <button id="cookie">Set sample cookie</button><button id="storage">Set sample storage</button>
+    <iframe id="frame" title="Local example frame" src="/frame" style="display:block;margin-top:18px;width:100%;height:120px;border:1px solid #d5dfed"></iframe>
+  </section>
+  <section id="long-content"><h2>Full-page and region screenshots</h2>
+    <div class="block">Top of the long example content</div>
+    <div class="block">Middle of the long example content</div>
+    <div class="block">Lower part of the long example content</div>
+    <button id="bottom">Button near the bottom of the page</button><p id="bottom-result"></p>
+  </section>
+</main><footer>Local integration fixture for Browser Control SDK</footer>
+<script>
+  const events=[];window.fixtureEvents=events;
+  document.querySelectorAll('input,select,[contenteditable]').forEach(e=>{
+    for(const type of ['input','change','keydown','keyup'])e.addEventListener(type,event=>events.push({type,id:e.id,key:event.key||'',value:e.type==='password'?'REDACTED':e.value||e.textContent}));
+  });
+  document.querySelector('#save').onclick=()=>{
+    document.querySelector('#result').textContent=`Saved: ${document.querySelector('#name').value} | ${document.querySelector('#mode').value} | ${document.querySelector('#agree').checked}`;
+  };
+  document.addEventListener('keydown',e=>document.querySelector('#key-result').textContent=`Key: ${e.key}`);
+  for(const type of ['pointermove','pointerdown','pointerup','click','wheel'])document.querySelector('#pointer').addEventListener(type,e=>{
+    events.push({type,x:e.clientX,y:e.clientY,button:e.button});
+    if(type==='click')document.querySelector('#pointer').textContent='Pointer click received';
+  });
+  document.querySelector('#delayed').onclick=()=>setTimeout(()=>{
+    const node=document.createElement('button');node.id='async-ready';node.textContent='Delayed button ready';document.querySelector('#async-container').append(node);
+  },250);
+  document.querySelector('#replace').onclick=()=>{
+    const old=document.querySelector('#replace-target');const fresh=old.cloneNode(true);fresh.textContent='Replacement node';old.replaceWith(fresh);
+  };
+  document.querySelector('#cookie').onclick=()=>document.cookie='fixture_cookie=owned-local-value; SameSite=Lax; Path=/';
+  document.querySelector('#storage').onclick=()=>{localStorage.setItem('fixture_local','local-value');sessionStorage.setItem('fixture_session','session-value')};
+  document.querySelector('#bottom').onclick=()=>document.querySelector('#bottom-result').textContent='Bottom button clicked';
+</script>
+</html>

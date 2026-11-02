@@ -1,0 +1,11 @@
+Browser Control SDK is an independent MIT-licensed project by TitanCSA.
+
+The application uses Microsoft's WebView2 SDK and Evergreen Runtime under their
+respective terms; it is not affiliated with or endorsed by Microsoft. The SDK
+package is fetched from official NuGet using a pinned SHA-256 digest. The Runtime
+is distributed and updated by Microsoft, not reimplemented in this repository.
+
+nlohmann/json is copyright Niels Lohmann and contributors, licensed under MIT.
+The supplied header retains its original notices. ThirdParty contains dependency
+records and license texts. Python and JavaScript clients use their standard
+libraries; the MCP bridge implements a public protocol independently.

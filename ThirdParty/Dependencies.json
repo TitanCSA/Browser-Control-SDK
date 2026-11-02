@@ -1,0 +1,12 @@
+{
+  "nlohmann_json": {
+    "version": "3.12.0",
+    "header_sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63",
+    "license": "LICENSE.nlohmann-json.txt"
+  },
+  "webview2_sdk": {
+    "version": "1.0.4314.35",
+    "nuget_sha256": "90778deb1b77e36292828b4b5833c9255c27533f40e0ddd55891ae718944edc4",
+    "license": "LICENSE.WebView2.txt"
+  }
+}
