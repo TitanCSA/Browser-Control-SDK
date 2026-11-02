@@ -1,6 +1,6 @@
 {
   "name": "@titancsa/browser-control-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Dependency-free Node.js client for the local Windows Browser Control SDK",
   "type": "module",
   "exports": "./browser-control.mjs",

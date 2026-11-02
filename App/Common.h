@@ -16,6 +16,8 @@ struct Envelope {
     std::shared_ptr<std::atomic_bool> canceled;
     // 0 queued, 1 dispatched, 2 canceled before dispatch. UI claims 0 -> 1 atomically.
     std::shared_ptr<std::atomic_uint> phase;
+    // Optional thread-safe partial receipt publication; never action arguments.
+    Reply progress;
 };
 inline Json Ok(Json value = Json::object()) { return {{"ok", true}, {"result", std::move(value)}}; }
 inline Json Fail(const std::string& code, const std::string& message, Json details = Json::object()) {

@@ -171,6 +171,7 @@ struct Pending {
     Handle done{CreateEventW(nullptr, TRUE, FALSE, nullptr)};
     std::mutex mutex;
     Json response;
+    Json progress = Json::object();
     bool replied = false;
     std::shared_ptr<std::atomic_bool> canceled = std::make_shared<std::atomic_bool>(false);
     std::shared_ptr<std::atomic_uint> phase = std::make_shared<std::atomic_uint>(0);
@@ -264,12 +265,21 @@ struct IpcServer::Impl {
             return finish(Ok({{"closing", true}}));
         }
         request.erase("token");
+        // Host async operations share this transport deadline, including UI queue time.
+        // Overwrite caller input: this field is internal rather than a client option.
+        request["_deadline_ticks"] = GetTickCount64() + timeout;
         auto pending = std::make_shared<Pending>();
         if (!pending->done.value) return finish(Fail("internal_error", "Cannot allocate a completion event."));
         auto envelope = std::make_unique<Envelope>();
         envelope->request = std::move(request);
         envelope->canceled = pending->canceled;
         envelope->phase = pending->phase;
+        if (envelope->request["method"] == "page.act") envelope->progress = [pending](Json receipt) {
+            if (!receipt.is_object()) return;
+            std::lock_guard<std::mutex> guard(pending->mutex);
+            if (pending->replied || pending->canceled->load()) return;
+            pending->progress = std::move(receipt);
+        };
         envelope->reply = [pending](Json response) {
             std::lock_guard<std::mutex> guard(pending->mutex);
             if (pending->replied || pending->canceled->load()) return;
@@ -285,9 +295,16 @@ struct IpcServer::Impl {
             unsigned queued = 0;
             const bool skipped = pending->phase->compare_exchange_strong(queued, 2);
             pending->canceled->store(true);
+            std::lock_guard<std::mutex> guard(pending->mutex);
+            // A completion can race the deadline wait; preserve its confirmed reply.
+            if (pending->replied) return finish(pending->response);
+            Json details = pending->progress;
+            if (skipped || !details.contains("may_have_executed") || !details["may_have_executed"].is_boolean())
+                details["may_have_executed"] = !skipped;
+            if (!pending->progress.empty()) details["status"] = wait == WAIT_TIMEOUT ? "timed_out" : "interrupted";
             return finish(Fail(wait == WAIT_TIMEOUT ? "timeout" : "browser_closed",
                 wait == WAIT_TIMEOUT ? "The browser command timed out; inspect may_have_executed before deciding what to do next." : "The browser instance is closing.",
-                {{"may_have_executed", !skipped}}));
+                std::move(details)));
         }
         std::lock_guard<std::mutex> guard(pending->mutex);
         return finish(pending->response);

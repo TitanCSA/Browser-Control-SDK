@@ -45,7 +45,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     }
     LocalFree(argv);
     if (help) {
-        const auto message = L"Browser Control SDK 0.1.0\n\nBrowserControl.exe [--profile-root PATH] [--endpoint PATH]\n\nWindows x64; WebView2 Evergreen Runtime required.\nAutomation is local to this browser instance and requires its private endpoint file.";
+        const auto message = L"Browser Control SDK 0.2.0\n\nBrowserControl.exe [--profile-root PATH] [--endpoint PATH]\n\nWindows x64; WebView2 Evergreen Runtime required.\nAutomation is local to this browser instance and requires its private endpoint file.";
         if (!GetStdHandle(STD_OUTPUT_HANDLE) || GetStdHandle(STD_OUTPUT_HANDLE) == INVALID_HANDLE_VALUE)
             AttachConsole(ATTACH_PARENT_PROCESS);
         WriteText(STD_OUTPUT_HANDLE, std::wstring(message) + L"\n");

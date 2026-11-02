@@ -19,6 +19,9 @@ __pycache__/
 !docs/images/*.jpg
 node_modules/
 *.local.json
+*.dpapi
+*.dpapi.tmp
+.browser-instance.lock
 *.egg-info/
 /SDK/Python/build/
 *.whl

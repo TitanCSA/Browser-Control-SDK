@@ -37,10 +37,15 @@ in browser.capabilities.
 | page.navigate | tab, url, wait=load (load/domcontentloaded/none), timeout_ms |
 | page.back / page.forward / page.reload / page.stop / page.info | tab; navigation wait as applicable |
 | page.snapshot | tab; returns url,title,text,elements:[{ref,role,name,tag,type,disabled,checked,value,bounds:{x,y,width,height}}] |
+| page.observe | tab optional (active),max_elements=80,max_text=6000,include_text=true,name?,role?; compact snapshot + tab/profile/generation |
+| page.act | tab optional,actions:[{action,...params}],observe=true,expected_generation?,expected_url?; max20 sequential actions, one deadline, stop on first failure |
+| page.login | tab optional,operation=status/fill,credential_id?,submit=false; metadata only; exact origin/profile matching |
+| saved_logins.list | profile?,origin?; IDs, profile, origin, username and autofill preference, no passwords |
+| saved_logins.delete / saved_logins.autofill | credential_id; autofill also requires enabled:boolean |
 | page.evaluate | tab, expression, await_promise=true, world=main (main/isolated); returns value or a JS error |
-| page.wait | tab, selector or ref, state=visible (visible/hidden/attached), timeout_ms |
-| page.click | tab, ref or selector or x/y; button=left, click_count=1 |
-| page.fill | tab, ref or selector, text |
+| page.wait | tab, selector/ref/exact name+role, state=visible (visible/hidden/attached), timeout_ms |
+| page.click | tab, ref/selector/exact name+role/x+y; button=left, click_count=1 |
+| page.fill | tab, ref/selector/exact name+role, text |
 | page.type | tab, text (currently focused element) |
 | page.key | tab, key (e.g. Enter, Tab, Control+a), action=press/down/up |
 | page.mouse | tab,type=move/down/up/wheel,x,y,button,delta_x,delta_y |
@@ -62,3 +67,22 @@ acting on a different page. Cookie/storage export or raw evaluation is explicit.
 
 Browser input is scoped to the owned webview. It never injects global OS keyboard
 or mouse input. Engine updates and website authentication restrictions still apply.
+
+## Finite plans and login handling
+
+`page.act` supports `click`, `fill`, `type`, `key`, `mouse`, `scroll`, `wait`,
+`navigate` and `observe`. Steps cannot select another tab or specify a separate
+timeout. The batch locks its tab at the start and is not a transaction: completed
+steps are not rolled back. Receipts contain `status`, `completed`, `total`,
+per-step `results` and optionally a final `observation`. Timeout details preserve
+the confirmed prefix and in-flight uncertainty; inspect `may_have_executed`
+before retrying any mutation.
+In a batch timeout this flag describes the unconfirmed in-flight step; the
+reported completed prefix has already happened.
+
+`page.login` returns no password. `status` inspects the form and saved metadata;
+`fill` uses one matching saved credential. `submit=true` explicitly requests one
+form submission and returns `authentication_verified:false`; inspect the page to
+determine success. Saving requires native UI confirmation. The vault uses
+current-user DPAPI, HTTPS and exact profile/origin matching. Private profiles
+cannot use it. [Sessions and saved logins](../docs/SESSIONS.md).

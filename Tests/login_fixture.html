@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Local sign-in fixture</title>
+<style>body{max-width:640px;margin:60px auto;font:17px system-ui;color:#142439}label{display:block;margin:18px 0 6px}input,button{font:inherit;padding:10px;border:1px solid #abc;border-radius:6px}button{display:block;margin-top:20px;background:#1767e8;color:white}</style>
+<h1>Local demonstration sign-in</h1>
+<p>This owned test page accepts only its documented fictitious credentials.</p>
+<main id="login-area"></main>
+<template id="login-template"><form method="post" action="/login">
+ <label for="login-user">Email</label><input id="login-user" name="username" type="email" autocomplete="username" required>
+ <label for="login-password">Password</label><input id="login-password" name="password" type="password" autocomplete="current-password" required>
+ <button id="sign-in" type="submit">Sign in</button>
+</form></template>
+<script>
+ const query=new URLSearchParams(location.search);
+ const show=()=>{
+   document.querySelector('#login-area').append(document.querySelector('#login-template').content.cloneNode(true));
+   if(query.has('ambiguous')){
+     const clone=document.querySelector('form').cloneNode(true);
+     clone.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+     document.querySelector('#login-area').append(clone);
+   }
+ };
+ if(query.has('delayed')) setTimeout(show,250); else show();
+</script></html>

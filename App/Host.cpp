@@ -1,5 +1,6 @@
 #include "Host.h"
 #include "DomScripts.h"
+#include "CredentialVault.h"
 #include <wrl.h>
 #include <WebView2.h>
 #include <commctrl.h>
@@ -22,7 +23,8 @@ namespace fs = std::filesystem;
 namespace BrowserControl {
 namespace {
 constexpr int ToolbarBottom=98, StatusHeight=26;
-constexpr int AddressId=110, BackId=111, ForwardId=112, ReloadId=113, NewId=114, CloseId=115, TabsId=116, GoId=117, ProfileId=118, DownloadId=119;
+constexpr int AddressId=110, BackId=111, ForwardId=112, ReloadId=113, NewId=114, CloseId=115, TabsId=116, GoId=117, ProfileId=118, DownloadId=119, LoginId=120;
+constexpr int SaveLoginId=130, FillLoginId=131, ForgetLoginId=132, AutoLoginId=133;
 constexpr COLORREF Navy=RGB(16,24,39), Bar=RGB(26,38,57), Blue=RGB(40,112,235), White=RGB(240,245,252);
 std::wstring Wide(const std::string& s) {
     if(s.empty())return {};
@@ -48,16 +50,22 @@ std::string NavigationKey(std::string value){
     auto scheme=value.find("://");if(scheme!=std::string::npos){auto end=value.find_first_of("/?",scheme+3);if(end==std::string::npos){value+="/";end=value.size()-1;}else if(value[end]=='?')value.insert(end,"/");for(size_t i=0;i<end;++i)if(value[i]>='A'&&value[i]<='Z')value[i]=static_cast<char>(value[i]-'A'+'a');}
     return value;
 }
-std::vector<std::string> Methods(){return {"browser.info","browser.capabilities","browser.shutdown","tabs.list","tabs.create","tabs.activate","tabs.close","profiles.list","profiles.create","page.navigate","page.back","page.forward","page.reload","page.stop","page.info","page.snapshot","page.evaluate","page.wait","page.click","page.fill","page.type","page.key","page.mouse","page.scroll","page.screenshot","page.viewport","page.settings","page.cookies","page.storage","page.cdp","window.set","window.info","downloads.list","downloads.configure","events.read"};}
+std::vector<std::string> Methods(){return {"browser.info","browser.capabilities","browser.shutdown","tabs.list","tabs.create","tabs.activate","tabs.close","profiles.list","profiles.create","page.navigate","page.back","page.forward","page.reload","page.stop","page.info","page.snapshot","page.observe","page.act","page.login","saved_logins.list","saved_logins.delete","saved_logins.autofill","page.evaluate","page.wait","page.click","page.fill","page.type","page.key","page.mouse","page.scroll","page.screenshot","page.viewport","page.settings","page.cookies","page.storage","page.cdp","window.set","window.info","downloads.list","downloads.configure","events.read"};}
+void EraseText(std::string& value){if(!value.empty())SecureZeroMemory(value.data(),value.size());value.clear();}
+void EraseLoginJson(Json& value){for(const auto* key:{"username","password"})if(value.contains(key)&&value[key].is_string())EraseText(value[key].get_ref<std::string&>());}
+struct LoginJsonGuard {Json& value;~LoginJsonGuard(){EraseLoginJson(value);}};
+struct SecretTextGuard {std::string& value;~SecretTextGuard(){EraseText(value);}};
 struct Operation {
-    Reply reply;ULONGLONG deadline=0;bool done=false;
+    Reply reply,progress;ULONGLONG deadline=0;bool done=false;std::function<Json()> timeoutResult;
     void Finish(Json value){if(done)return;done=true;auto f=std::move(reply);if(f)try{f(std::move(value));}catch(...){}}
+    void Publish(const Json& value){if(!done&&progress)try{progress(value);}catch(...){}}
 };
 struct Profile {std::string name;bool inPrivate=false;ComPtr<ICoreWebView2Environment> environment;bool creating=false;std::vector<std::function<void(HRESULT)>> waiting;};
 struct Tab {
     std::string id,profile,title="New tab",url="about:blank",initialUrl="about:blank";
     bool inPrivate=false,ready=false,loading=true,closed=false,externalUrisBlocked=false;
     uint64_t generation=0,snapshot=0;int context=0,viewportWidth=0,viewportHeight=0;double scale=1;
+    uint64_t autoFillGeneration=UINT64_MAX;
     unsigned buttons=0;ComPtr<ICoreWebView2Controller> controller;ComPtr<ICoreWebView2> core;
     std::shared_ptr<Operation> navigation;std::string wait="load",expectedUrl;uint64_t currentNavigation=0,expectedNavigation=0;
 };
@@ -71,14 +79,16 @@ struct State : std::enable_shared_from_this<State> {
     fs::path downloadDirectory;std::deque<Json> events;std::vector<Json> downloads;std::map<std::string,ComPtr<ICoreWebView2DownloadOperation>> downloadOperations;
     std::vector<std::shared_ptr<Operation>> pending;std::vector<std::shared_ptr<Waiting>> waiting;
     std::vector<HWND> buttons;
+    std::unique_ptr<CredentialVault> vault;std::string vaultError;
 
     ~State(){if(font)DeleteObject(font);if(navyBrush)DeleteObject(navyBrush);if(barBrush)DeleteObject(barBrush);}
     std::shared_ptr<Operation> NewOperation(Reply reply,const Json& request){
         auto op=std::make_shared<Operation>();op->reply=std::move(reply);
-        auto ms=request.value("timeout_ms",15000);if(ms<1||ms>120000)throw std::invalid_argument("timeout_ms must be between 1 and 120000");
+        int64_t ms=15000;try{if(request.contains("timeout_ms")){if(!request.at("timeout_ms").is_number_integer())throw std::invalid_argument("timeout_ms must be an integer from 1 to 120000");ms=request.at("timeout_ms").get<int64_t>();}if(ms<1||ms>120000)throw std::invalid_argument("timeout_ms must be between 1 and 120000");op->deadline=GetTickCount64()+static_cast<ULONGLONG>(ms);if(request.contains("_deadline_ticks"))op->deadline=std::min(op->deadline,request.at("_deadline_ticks").get<ULONGLONG>());}catch(const std::exception& error){op->Finish(Fail("invalid_argument",error.what()));return op;}
+        if(GetTickCount64()>=op->deadline){op->Finish(Fail("timeout","The request expired before the browser operation started"));return op;}
         pending.erase(std::remove_if(pending.begin(),pending.end(),[](const auto& entry){return entry->done;}),pending.end());
         if(pending.size()>=128){op->Finish(Fail("limit_exceeded","Too many browser operations are pending"));return op;}
-        op->deadline=GetTickCount64()+static_cast<ULONGLONG>(ms);pending.push_back(op);return op;
+        pending.push_back(op);return op;
     }
     void Event(const std::string& type,const std::string& tab,Json data=Json::object()){
         events.push_back({{"seq",++eventSequence},{"time_ms",GetTickCount64()},{"type",type},{"tab",tab},{"data",std::move(data)}});
@@ -89,10 +99,11 @@ struct State : std::enable_shared_from_this<State> {
     void Note(std::string value){status=std::move(value);if(hwnd)InvalidateRect(hwnd,nullptr,FALSE);}
     void Layout(){
         if(!hwnd)return;RECT r{};GetClientRect(hwnd,&r);const int width=r.right;
-        MoveWindow(tabsControl,12,8,std::max(100,width-380),30,TRUE);
-        MoveWindow(GetDlgItem(hwnd,NewId),std::max(120,width-358),8,34,30,TRUE);
-        MoveWindow(GetDlgItem(hwnd,CloseId),std::max(156,width-320),8,34,30,TRUE);
-        MoveWindow(profileBox,std::max(192,width-278),9,160,250,TRUE);
+        MoveWindow(tabsControl,12,8,std::max(100,width-470),30,TRUE);
+        MoveWindow(GetDlgItem(hwnd,NewId),std::max(120,width-448),8,34,30,TRUE);
+        MoveWindow(GetDlgItem(hwnd,CloseId),std::max(156,width-410),8,34,30,TRUE);
+        MoveWindow(profileBox,std::max(192,width-368),9,160,250,TRUE);
+        MoveWindow(GetDlgItem(hwnd,LoginId),std::max(360,width-200),8,90,30,TRUE);
         MoveWindow(GetDlgItem(hwnd,DownloadId),std::max(360,width-110),8,98,30,TRUE);
         MoveWindow(GetDlgItem(hwnd,BackId),12,49,35,34,TRUE);MoveWindow(GetDlgItem(hwnd,ForwardId),52,49,35,34,TRUE);MoveWindow(GetDlgItem(hwnd,ReloadId),92,49,35,34,TRUE);
         MoveWindow(address,139,49,std::max(100,width-211),34,TRUE);MoveWindow(GetDlgItem(hwnd,GoId),width-64,49,52,34,TRUE);
@@ -124,6 +135,71 @@ struct State : std::enable_shared_from_this<State> {
         {std::ofstream out(temp,std::ios::binary|std::ios::trunc);auto data=names.dump(2);out.write(data.data(),static_cast<std::streamsize>(data.size()));if(!out)throw std::runtime_error("Profile metadata could not be saved");}
         if(!MoveFileExW(temp.c_str(),target.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))throw std::runtime_error("Profile metadata could not be committed");
     }
+    void EvalLogin(const std::shared_ptr<Tab>& tab,const std::string& script,const std::shared_ptr<Operation>& op,std::function<void(Json)> completed,bool allowNavigation=false){
+        if(op->done)return;
+        const auto now=GetTickCount64();if(now>=op->deadline){op->Finish(Fail("timeout","Saved login operation expired"));return;}
+        auto guarded=NewOperation([op,completed=std::move(completed)](Json reply){
+            if(op->done){if(reply.contains("result"))EraseLoginJson(reply["result"]);return;}
+            if(!reply.value("ok",false)){const auto code=reply.value("error",Json::object()).value("code",std::string("engine_error"));op->Finish(Fail("login_failed","The login form could not be accessed safely",{{"stage","login_form"},{"cause",code}}));return;}
+            auto value=std::move(reply["result"]);try{completed(std::move(value));}catch(const VaultError& error){EraseLoginJson(value);op->Finish(Fail(error.code,error.what(),{{"windows_error",error.windows_error}}));}catch(...){EraseLoginJson(value);op->Finish(Fail("login_failed","The saved login operation could not be completed safely"));}
+        },{{"timeout_ms",static_cast<int>(std::min<ULONGLONG>(120000,op->deadline-now))}});
+        guarded->deadline=op->deadline;
+        Eval(tab,script,guarded,[guarded](Json value){guarded->Finish(Ok(std::move(value)));},true,true,allowNavigation);
+    }
+    void Login(const std::shared_ptr<Tab>& tab,const Json& p,const std::shared_ptr<Operation>& op,bool autoOnly=false){
+        if(!vault){op->Finish(Fail("vault_unavailable","Saved logins are unavailable",{{"detail",vaultError}}));return;}
+        if(tab->inPrivate){op->Finish(Fail("private_profile","Saved logins cannot be saved or filled in private profiles"));return;}
+        auto action=p.value("operation",std::string("status"));if(action!="status"&&action!="fill")throw std::invalid_argument("Login operation must be status or fill");
+        const auto generation=tab->generation;auto self=shared_from_this();
+        EvalLogin(tab,LoginInspectScript(false),op,[self,tab,p,op,action,generation,autoOnly](Json form){
+            auto origin=CredentialVault::NormalizeOrigin(form.at("origin").get<std::string>());auto items=self->vault->List(tab->profile,origin);
+            if(action=="status"){op->Finish(Ok({{"profile",tab->profile},{"origin",origin},{"form",form},{"saved_logins",items},{"available",form.value("status",std::string())=="ready"&&!items.empty()}}));return;}
+            if(form.value("status",std::string())!="ready"){op->Finish(Fail(form.value("status",std::string("no_login_form")),"A unique visible login form is required; focus the intended form first"));return;}
+            auto selected=p.value("credential_id",std::string());Json matches=Json::array();for(const auto& item:items)if((selected.empty()||item.at("id")==selected)&&(!autoOnly||item.value("auto_fill",false)))matches.push_back(item);
+            if(matches.size()!=1){op->Finish(Fail(matches.empty()?"login_not_found":"ambiguous_login",matches.empty()?"No saved login matches this exact origin and profile":"Choose one credential_id for this origin and profile"));return;}
+            if(op->done||tab->closed||tab->generation!=generation){op->Finish(Fail("stale_document","The page changed before the saved login could be filled"));return;}
+            const auto id=matches[0].at("id").get<std::string>();const bool submit=p.value("submit",false);
+            self->vault->WithCredential(tab->profile,origin,id,[self,tab,op,generation,origin,id,submit](const std::wstring& user,const std::wstring& pass){
+                if(op->done||tab->closed||tab->generation!=generation){op->Finish(Fail("stale_document","The page changed before the saved login could be filled"));return;}
+                Json credential{{"origin",origin},{"username",Utf8(user)},{"password",Utf8(pass)},{"submit",submit}};LoginJsonGuard clearCredential{credential};std::string encoded=credential.dump();SecretTextGuard clearEncoded{encoded};std::string script=LoginFillScript(encoded);SecretTextGuard clearScript{script};EraseLoginJson(credential);EraseText(encoded);
+                self->EvalLogin(tab,script,op,[op,id,origin](Json value){const auto status=value.value("status",std::string());if(status!="filled"){op->Finish(Fail(status.empty()?"login_failed":status,"The login form changed or could not be filled safely"));return;}value["credential_id"]=id;value["origin"]=origin;value["authentication_verified"]=false;op->Finish(Ok(value));},submit);
+            });
+        });
+    }
+    void MaybeAutoFill(const std::shared_ptr<Tab>& tab){
+        if(!vault||tab->inPrivate||tab->closed||tab->autoFillGeneration==tab->generation)return;
+        tab->autoFillGeneration=tab->generation;auto saved=vault->List(tab->profile);if(std::none_of(saved.begin(),saved.end(),[](const Json& item){return item.value("auto_fill",false);}))return;auto weak=weak_from_this();const auto id=tab->id;
+        auto op=NewOperation([weak,id](Json result){if(auto state=weak.lock()){if(result.value("ok",false)){state->Event("login.autofilled",id);state->Note("Saved login filled for its exact origin; complete sign-in or MFA on the page");}}},{{"timeout_ms",5000}});
+        Login(tab,{{"operation","fill"},{"submit",false}},op,true);
+    }
+    void UiLogin(int command){
+        auto tab=Find(active);if(!tab||!tab->ready){Note("Open a ready browser tab first");return;}if(tab->inPrivate){Note("Saved logins are disabled in private profiles");return;}if(!vault){Note("Saved login storage is unavailable: "+vaultError);return;}
+        auto weak=weak_from_this();auto op=NewOperation([weak](Json reply){if(auto state=weak.lock())if(!reply.value("ok",false))state->Note(reply.value("error",Json::object()).value("message",std::string("Saved login operation failed")));},{{"timeout_ms",120000}});
+        const auto generation=tab->generation;auto self=shared_from_this();
+        EvalLogin(tab,LoginInspectScript(command==SaveLoginId),op,[self,tab,command,generation,op](Json value){
+            LoginJsonGuard cleanup{value};
+            auto origin=CredentialVault::NormalizeOrigin(value.at("origin").get<std::string>());
+            if(command==SaveLoginId){
+                if(value.value("status",std::string())!="ready"||!value.contains("password")||value.at("password").get_ref<const std::string&>().empty()){op->Finish(Fail("no_login_form","Enter a username and password in one visible login form first"));return;}
+                const std::wstring prompt=L"Save the login currently entered on this page?\n\nOrigin: "+Wide(origin)+L"\nProfile: "+Wide(tab->profile)+L"\n\nThe password will be protected for this Windows user.\nAutomatic filling remains off until you enable it.\nOnly save credentials you are authorized to use.";
+                if(MessageBoxW(self->hwnd,prompt.c_str(),L"Save login - explicit permission",MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)!=IDYES){op->Finish(Ok({{"saved",false}}));return;}
+                if(op->done||tab->closed||tab->generation!=generation){op->Finish(Fail("stale_document","The page changed while permission was requested; save again on the current page"));return;}
+                const auto id=self->vault->Put(tab->profile,origin,value.value("username",std::string()),value.at("password").get_ref<const std::string&>(),false);self->Note("Login saved for this exact origin and profile; use Logins to fill or enable auto-fill");self->Event("login.saved",tab->id,{{"credential_id",id}});op->Finish(Ok({{"saved",true},{"credential_id",id}}));return;
+            }
+            auto items=self->vault->List(tab->profile,origin);if(items.empty()){op->Finish(Fail("login_not_found","No saved login matches this exact origin and profile"));return;}
+            size_t index=0;
+            if(items.size()>1){
+                HMENU menu=CreatePopupMenu();auto heading=Wide(origin);AppendMenuW(menu,MF_STRING|MF_GRAYED,0,heading.c_str());AppendMenuW(menu,MF_SEPARATOR,0,nullptr);
+                for(size_t i=0;i<items.size();++i){auto user=items[i].value("username",std::string());auto label=Wide(user.empty()?"(no username)":user);if(label.size()>120)label.resize(120);size_t at=0;while((at=label.find(L'&',at))!=std::wstring::npos){label.insert(at,L"&");at+=2;}if(items[i].value("auto_fill",false))label+=L"  [auto-fill]";AppendMenuW(menu,MF_STRING,static_cast<UINT_PTR>(1000+i),label.c_str());}
+                POINT point{};GetCursorPos(&point);int choice=static_cast<int>(TrackPopupMenu(menu,TPM_RETURNCMD|TPM_LEFTALIGN|TPM_TOPALIGN,point.x,point.y,0,self->hwnd,nullptr));DestroyMenu(menu);
+                if(choice<1000||static_cast<size_t>(choice-1000)>=items.size()){op->Finish(Ok({{"canceled",true}}));return;}index=static_cast<size_t>(choice-1000);
+            }
+            if(op->done||tab->closed||tab->generation!=generation){op->Finish(Fail("stale_document","The page changed while choosing an account; choose again on the current page"));return;}
+            auto id=items[index].at("id").get<std::string>();if(command==FillLoginId){self->Login(tab,{{"operation","fill"},{"credential_id",id}},op);return;}
+            if(command==ForgetLoginId){self->vault->Delete(tab->profile,origin,id);self->Note("Saved login removed for this origin and profile");op->Finish(Ok({{"deleted",true}}));}
+            else if(command==AutoLoginId){bool enabled=!items[index].value("auto_fill",false);self->vault->SetAutoFill(tab->profile,origin,id,enabled);self->Note(enabled?"Auto-fill enabled for this exact origin and profile; forms are never submitted automatically":"Auto-fill disabled for this saved login");op->Finish(Ok({{"auto_fill",enabled}}));}
+        });
+    }
     void Cdp(const std::shared_ptr<Tab>& tab,const std::string& method,Json params,const std::shared_ptr<Operation>& op,std::function<void(Json)> completed){
         if(op->done)return;if(closing||tab->closed||!tab->core){op->Finish(Fail("tab_closed","The tab is closed or unavailable"));return;}
         auto weak=weak_from_this();std::weak_ptr<Tab> weakTab=tab;
@@ -138,28 +214,28 @@ struct State : std::enable_shared_from_this<State> {
             }).Get());
         if(FAILED(hr))op->Finish(Fail("engine_error","The browser command could not be submitted",{{"hresult",Hr(hr)},{"method",method}}));
     }
-    void Eval(const std::shared_ptr<Tab>& tab,const std::string& expression,const std::shared_ptr<Operation>& op,std::function<void(Json)> completed,bool await=true,bool isolated=true){
+    void Eval(const std::shared_ptr<Tab>& tab,const std::string& expression,const std::shared_ptr<Operation>& op,std::function<void(Json)> completed,bool await=true,bool isolated=true,bool allowNavigation=false){
         if(op->done)return;
         auto self=shared_from_this();const auto generation=tab->generation;
         if(isolated&&!tab->context){
-            Cdp(tab,"Page.getFrameTree",Json::object(),op,[self,tab,expression,op,completed,await,generation](Json frames){
+            Cdp(tab,"Page.getFrameTree",Json::object(),op,[self,tab,expression,op,completed,await,generation,allowNavigation](Json frames){
                 if(tab->generation!=generation){op->Finish(Fail("stale_document","The page navigated; retry on the new document"));return;}
                 const auto id=frames.at("frameTree").at("frame").at("id").get<std::string>();
                 self->Cdp(tab,"Page.createIsolatedWorld",{{"frameId",id},{"worldName","BrowserControlSDK"},{"grantUniveralAccess",false}},op,
-                    [self,tab,expression,op,completed,await,generation](Json context){
+                    [self,tab,expression,op,completed,await,generation,allowNavigation](Json context){
                         if(tab->generation!=generation){op->Finish(Fail("stale_document","The page navigated; retry on the new document"));return;}
-                        tab->context=context.at("executionContextId").get<int>();self->Eval(tab,expression,op,completed,await);
+                        tab->context=context.at("executionContextId").get<int>();self->Eval(tab,expression,op,completed,await,true,allowNavigation);
                     });
             });return;
         }
         Json params{{"expression",expression},{"returnByValue",true},{"awaitPromise",await},{"userGesture",true}};if(isolated)params["contextId"]=tab->context;
         Cdp(tab,"Runtime.evaluate",std::move(params),op,
-            [op,completed,generation,tab](Json data){
-                if(tab->generation!=generation){op->Finish(Fail("stale_document","The page navigated during evaluation"));return;}
+            [op,completed,generation,tab,allowNavigation](Json data){
+                if(!allowNavigation&&tab->generation!=generation){op->Finish(Fail("stale_document","The page navigated during evaluation"));return;}
                 if(data.contains("exceptionDetails")){
                     auto detail=data["exceptionDetails"];std::string message=detail.value("text",std::string("JavaScript exception"));
                     if(detail.contains("exception"))message=detail["exception"].value("description",message);
-                    auto code=message.find("STALE_REF")!=std::string::npos?"stale_ref":"javascript_error";
+                    auto code=message.find("STALE_REF")!=std::string::npos?"stale_ref":message.find("AMBIGUOUS_TARGET")!=std::string::npos?"ambiguous_target":"javascript_error";
                     op->Finish(Fail(code,message.substr(0,16000)));return;
                 }
                 Json result=data.value("result",Json::object());if(result.value("type",std::string())=="undefined")completed(Json());else completed(result.value("value",Json()));
@@ -193,6 +269,7 @@ struct State : std::enable_shared_from_this<State> {
         tab->controller=controller;HRESULT hr=controller->get_CoreWebView2(&tab->core);
         if(FAILED(hr)||!tab->core){op->Finish(Fail("runtime_error","The controller did not expose a browser"));return;}
         ComPtr<ICoreWebView2Settings> settings;tab->core->get_Settings(&settings);if(settings){settings->put_IsStatusBarEnabled(FALSE);settings->put_AreDevToolsEnabled(TRUE);settings->put_IsWebMessageEnabled(FALSE);settings->put_AreHostObjectsAllowed(FALSE);}
+        ComPtr<ICoreWebView2Settings4> passwordSettings;if(settings&&SUCCEEDED(settings.As(&passwordSettings)))passwordSettings->put_IsPasswordAutosaveEnabled(FALSE);
         auto weak=weak_from_this();std::weak_ptr<Tab> wt=tab;EventRegistrationToken token{};
         ComPtr<ICoreWebView2_18> core18;
         if(SUCCEEDED(tab->core.As(&core18))){
@@ -216,7 +293,7 @@ struct State : std::enable_shared_from_this<State> {
         tab->core->add_NavigationCompleted(Callback<ICoreWebView2NavigationCompletedEventHandler>([weak,wt](ICoreWebView2*,ICoreWebView2NavigationCompletedEventArgs* args)->HRESULT{
             auto s=weak.lock();auto t=wt.lock();if(!s||!t||t->closed)return S_OK;BOOL success=FALSE;args->get_IsSuccess(&success);COREWEBVIEW2_WEB_ERROR_STATUS error=COREWEBVIEW2_WEB_ERROR_STATUS_UNKNOWN;args->get_WebErrorStatus(&error);UINT64 navigation=0;args->get_NavigationId(&navigation);if(t->currentNavigation==navigation)t->loading=false;s->NavigationDone(t,navigation,false,success!=FALSE,static_cast<int>(error));s->Event("navigation.completed",t->id,{{"success",success!=FALSE},{"web_error_status",static_cast<int>(error)},{"navigation_id",navigation}});s->Note(success?"Ready - automation is local to this Windows user":"Navigation failed - see events.read for details");s->RefreshTabs();return S_OK;
         }).Get(),&token);
-        ComPtr<ICoreWebView2_2> core2;if(SUCCEEDED(tab->core.As(&core2)))core2->add_DOMContentLoaded(Callback<ICoreWebView2DOMContentLoadedEventHandler>([weak,wt](ICoreWebView2*,ICoreWebView2DOMContentLoadedEventArgs* args)->HRESULT{auto s=weak.lock();auto t=wt.lock();UINT64 navigation=0;args->get_NavigationId(&navigation);if(s&&t&&!t->closed)s->NavigationDone(t,navigation,true);return S_OK;}).Get(),&token);
+        ComPtr<ICoreWebView2_2> core2;if(SUCCEEDED(tab->core.As(&core2)))core2->add_DOMContentLoaded(Callback<ICoreWebView2DOMContentLoadedEventHandler>([weak,wt](ICoreWebView2*,ICoreWebView2DOMContentLoadedEventArgs* args)->HRESULT{auto s=weak.lock();auto t=wt.lock();UINT64 navigation=0;args->get_NavigationId(&navigation);if(s&&t&&!t->closed){s->NavigationDone(t,navigation,true);try{s->MaybeAutoFill(t);}catch(...){s->Note("Saved login auto-fill could not be checked; use Logins to try manually");}}return S_OK;}).Get(),&token);
         tab->core->add_DocumentTitleChanged(Callback<ICoreWebView2DocumentTitleChangedEventHandler>([weak,wt](ICoreWebView2* core,IUnknown*)->HRESULT{auto s=weak.lock();auto t=wt.lock();if(s&&t&&!t->closed){LPWSTR text=nullptr;core->get_DocumentTitle(&text);t->title=Utf8(Take(text,1200));s->RefreshTabs();}return S_OK;}).Get(),&token);
         tab->core->add_SourceChanged(Callback<ICoreWebView2SourceChangedEventHandler>([weak,wt](ICoreWebView2* core,ICoreWebView2SourceChangedEventArgs*)->HRESULT{auto s=weak.lock();auto t=wt.lock();if(s&&t&&!t->closed){LPWSTR text=nullptr;core->get_Source(&text);t->url=Utf8(Take(text));s->RefreshTabs();}return S_OK;}).Get(),&token);
         tab->core->add_NewWindowRequested(Callback<ICoreWebView2NewWindowRequestedEventHandler>([weak,wt](ICoreWebView2*,ICoreWebView2NewWindowRequestedEventArgs* args)->HRESULT{auto s=weak.lock();auto t=wt.lock();if(!s||!t||s->closing)return S_OK;LPWSTR text=nullptr;args->get_Uri(&text);auto url=Utf8(Take(text));args->put_Handled(TRUE);auto request=Json{{"timeout_ms",15000}};auto next=s->NewOperation([](Json){},request);s->CreateTab({{"profile",t->profile},{"in_private",t->inPrivate},{"url",url}},next);return S_OK;}).Get(),&token);
@@ -257,7 +334,7 @@ struct State : std::enable_shared_from_this<State> {
         tabs.erase(std::remove(tabs.begin(),tabs.end(),t),tabs.end());if(active==t->id){active.clear();if(!tabs.empty())Activate(tabs.front());}RefreshTabs();Event("tab.closed",t->id);
     }
     void Timer(){
-        const auto now=GetTickCount64();for(auto& op:pending)if(!op->done&&now>=op->deadline)op->Finish(Fail("timeout","The operation did not finish before its deadline"));
+        const auto now=GetTickCount64();auto operations=pending;for(auto& op:operations)if(!op->done&&now>=op->deadline)op->Finish(op->timeoutResult?op->timeoutResult():Fail("timeout","The operation did not finish before its deadline"));
         pending.erase(std::remove_if(pending.begin(),pending.end(),[](const auto& op){return op->done;}),pending.end());
         auto copy=waiting;for(auto& w:copy){if(w->operation->done||w->evaluating)continue;try{auto tab=w->tab.lock();if(!tab||tab->closed){w->operation->Finish(Fail("tab_closed","The tab closed while waiting"));continue;}w->evaluating=true;auto expression=TargetScript(w->target.dump(),"return {found:!!e,visible:shown};");
             Eval(tab,expression,w->operation,[w](Json value){w->evaluating=false;const bool found=value.value("found",false),shown=value.value("visible",false);if((w->state=="attached"&&found)||(w->state=="visible"&&shown)||(w->state=="hidden"&&!shown))w->operation->Finish(Ok({{"state",w->state},{"found",found},{"visible",shown}}));});
@@ -279,18 +356,19 @@ Json KeyParameters(const std::string& input,const std::string& type){
     if(type=="keyDown"&&!text.empty()&&(modifiers&7)==0){p["text"]=text;p["unmodifiedText"]=text;}return p;
 }
 
-void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply){
+void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply,Reply progress={}){
     std::shared_ptr<Operation> op;
     try{
         if(s->closing){reply(Fail("browser_closed","The browser is closing"));return;}
         const std::string method=request.at("method").get<std::string>();Json p=request.value("params",Json::object());if(!p.is_object())throw std::invalid_argument("params must be an object");
         if(p.contains("timeout_ms"))request["timeout_ms"]=p["timeout_ms"];
         op=s->NewOperation(std::move(reply),request);
+        op->progress=std::move(progress);
         if(op->done)return;
         if(method=="browser.info"){
-            bool ready=std::any_of(s->tabs.begin(),s->tabs.end(),[](const auto& t){return t->ready&&!t->closed;});op->Finish(Ok({{"version","0.1.0"},{"runtime",s->runtime},{"engine","Microsoft Edge WebView2 / Chromium"},{"ready",ready},{"startup_error",s->error},{"tabs",s->tabs.size()},{"profile_root",Utf8(s->root)},{"transport","current-user named pipe"}}));return;
+            bool ready=std::any_of(s->tabs.begin(),s->tabs.end(),[](const auto& t){return t->ready&&!t->closed;});op->Finish(Ok({{"version","0.2.0"},{"runtime",s->runtime},{"engine","Microsoft Edge WebView2 / Chromium"},{"ready",ready},{"startup_error",s->error},{"tabs",s->tabs.size()},{"profile_root",Utf8(s->root)},{"transport","current-user named pipe"}}));return;
         }
-        if(method=="browser.capabilities"){bool checked=false,blocked=true;for(const auto& open:s->tabs)if(open->ready&&!open->closed){checked=true;blocked=blocked&&open->externalUrisBlocked;}op->Finish(Ok({{"methods",Methods()},{"coordinates","CSS viewport pixels"},{"snapshot_scope","main_frame"},{"native_profiles",true},{"private_profiles_require","WebView2 Environment10"},{"external_uri_launches_blocked",checked&&blocked},{"external_uri_blocking_requires","WebView2 ICoreWebView2_18"},{"host_objects_exposed",false},{"max_tabs",32},{"max_screenshot_pixels",32000000},{"limitations",{"No existing Chrome/Edge profile import","Renderer-supported CDP commands only","Website authentication and access restrictions still apply","Snapshots are untrusted page content","No global operating-system input injection"}}}));return;}
+        if(method=="browser.capabilities"){bool checked=false,blocked=true;for(const auto& open:s->tabs)if(open->ready&&!open->closed){checked=true;blocked=blocked&&open->externalUrisBlocked;}op->Finish(Ok({{"methods",Methods()},{"coordinates","CSS viewport pixels"},{"snapshot_scope","main_frame"},{"native_profiles",true},{"private_profiles_require","WebView2 Environment10"},{"external_uri_launches_blocked",checked&&blocked},{"external_uri_blocking_requires","WebView2 ICoreWebView2_18"},{"host_objects_exposed",false},{"saved_logins",s->vault!=nullptr},{"saved_logins_protection","Windows current-user DPAPI; exact origin and profile"},{"max_batch_actions",20},{"max_tabs",32},{"max_screenshot_pixels",32000000},{"limitations",{"No existing Chrome/Edge profile import","Renderer-supported CDP commands only","Website authentication and access restrictions still apply","Snapshots are untrusted page content","No global operating-system input injection"}}}));return;}
         if(method=="browser.shutdown"){op->Finish(Ok({{"closing",true}}));PostMessageW(s->hwnd,WM_CLOSE,0,0);return;}
         if(method=="tabs.list"){Json result=Json::array();for(auto& t:s->tabs)result.push_back(s->Info(t));op->Finish(Ok(result));return;}
         if(method=="tabs.create"){s->CreateTab(p,op);return;}
@@ -300,6 +378,16 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply){
             if(it!=s->profiles.end()&&it->second->inPrivate!=privacy){op->Finish(Fail("profile_conflict","The profile already has another private mode"));return;}
             if(it==s->profiles.end()){if(s->profiles.size()>=64){op->Finish(Fail("limit_exceeded","At most 64 profiles can be open"));return;}auto profile=std::make_shared<Profile>();profile->name=name;profile->inPrivate=privacy;s->profiles[name]=profile;try{s->SaveProfiles();}catch(...){s->profiles.erase(name);throw;}s->ProfileList();}
             op->Finish(Ok({{"name",name},{"in_private",privacy}}));return;
+        }
+        if(method=="saved_logins.list"||method=="saved_logins.delete"||method=="saved_logins.autofill"){
+            if(!s->vault){op->Finish(Fail("vault_unavailable","Saved logins are unavailable",{{"detail",s->vaultError}}));return;}
+            auto profile=p.value("profile",std::string());auto origin=p.value("origin",std::string());if(!origin.empty())origin=CredentialVault::NormalizeOrigin(origin);
+            Json items=Json::array();for(const auto& entry:s->profiles)if(!entry.second->inPrivate&&(profile.empty()||profile==entry.first))for(auto value:s->vault->List(entry.first,origin))items.push_back(std::move(value));
+            if(method=="saved_logins.list"){op->Finish(Ok(items));return;}
+            auto id=p.at("credential_id").get<std::string>();auto found=std::find_if(items.begin(),items.end(),[&id](const Json& item){return item.at("id")==id;});if(found==items.end()){op->Finish(Fail("login_not_found","No saved credential matches this credential_id and filter"));return;}
+            auto owner=found->at("profile").get<std::string>(),scope=found->at("origin").get<std::string>();
+            if(method=="saved_logins.delete"){bool deleted=s->vault->Delete(owner,scope,id);op->Finish(Ok({{"deleted",deleted}}));return;}
+            bool enabled=p.at("enabled").get<bool>();s->vault->SetAutoFill(owner,scope,id,enabled);op->Finish(Ok({{"credential_id",id},{"auto_fill",enabled}}));return;
         }
         if(method=="events.read"){
             auto since=p.value("since",uint64_t(0));int limit=p.value("limit",100);if(limit<1||limit>512)throw std::invalid_argument("limit must be 1..512");Json entries=Json::array();for(const auto& e:s->events)if(e.at("seq").get<uint64_t>()>since&&entries.size()<static_cast<size_t>(limit))entries.push_back(e);op->Finish(Ok({{"events",entries},{"cursor",entries.empty()?since:entries.back().at("seq").get<uint64_t>()},{"latest",s->eventSequence},{"dropped",s->dropped}}));return;
@@ -319,11 +407,35 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply){
             }
             RECT box{};GetWindowRect(s->hwnd,&box);op->Finish(Ok({{"x",box.left},{"y",box.top},{"width",box.right-box.left},{"height",box.bottom-box.top},{"visible",IsWindowVisible(s->hwnd)!=FALSE},{"maximized",IsZoomed(s->hwnd)!=FALSE},{"minimized",IsIconic(s->hwnd)!=FALSE}}));return;
         }
-        auto id=p.at("tab").get<std::string>();auto tab=s->Find(id);if(!tab){op->Finish(Fail("tab_not_found","This tab ID is not open"));return;}
+        const bool activeAllowed=method=="page.observe"||method=="page.act"||method=="page.login";
+        auto id=activeAllowed?p.value("tab",s->active):p.at("tab").get<std::string>();auto tab=s->Find(id);if(!tab){op->Finish(Fail("tab_not_found","This tab ID is not open"));return;}
         if(method=="tabs.close"){s->CloseTab(tab);op->Finish(Ok({{"closed",true}}));return;}
         if(method=="tabs.activate"){s->Activate(tab);op->Finish(Ok(s->Info(tab)));return;}
         if(method=="page.info"){op->Finish(Ok(s->Info(tab)));return;}
         if(!tab->ready||!tab->core){op->Finish(Fail("not_ready","The tab's Chromium controller is not ready"));return;}
+        if(method=="page.login"){s->Login(tab,p,op);return;}
+        if(method=="page.act"){
+            auto actions=p.at("actions");if(!actions.is_array()||actions.empty()||actions.size()>20)throw std::invalid_argument("actions must contain 1..20 action objects");
+            const std::set<std::string> allowed{"click","fill","type","key","mouse","scroll","wait","navigate","observe"};
+            for(const auto& action:actions){if(!action.is_object()||!action.contains("action")||!action.at("action").is_string()||!allowed.count(action.at("action").get<std::string>()))throw std::invalid_argument("Unsupported batch action");if(action.contains("tab")||action.contains("timeout_ms"))throw std::invalid_argument("Batch actions share one selected tab and one overall timeout");}
+            if((p.contains("expected_generation")&&p.at("expected_generation").get<uint64_t>()!=tab->generation)||(p.contains("expected_url")&&p.at("expected_url").get<std::string>()!=tab->url)){op->Finish(Fail("stale_observation","The selected page differs from the expected observation; observe it again before acting"));return;}
+            auto receipt=std::make_shared<Json>(Json{{"tab",tab->id},{"status","running"},{"completed",0},{"total",actions.size()},{"results",Json::array()},{"may_have_executed",false}});auto plan=std::make_shared<Json>(std::move(actions));auto index=std::make_shared<size_t>(0);const bool observe=p.value("observe",true);
+            op->timeoutResult=[receipt](){auto details=*receipt;details["status"]="timeout";return Fail("timeout","The action batch exceeded its deadline; completed actions are not repeated",std::move(details));};op->Publish(*receipt);
+            auto next=std::make_shared<std::function<void()>>();std::weak_ptr<std::function<void()>> weakNext=next;
+            *next=[s,tab,op,receipt,plan,index,observe,weakNext](){
+                if(op->done)return;
+                auto now=GetTickCount64();if(now>=op->deadline){op->Finish(op->timeoutResult());return;}
+                const bool stopped=receipt->at("status")=="failed";
+                if(*index==plan->size()||stopped){
+                    if(!stopped){(*receipt)["status"]="completed";(*receipt)["may_have_executed"]=false;}receipt->erase("in_flight");
+                    if(!observe){op->Finish(Ok(*receipt));return;}
+                    DispatchState(s,{{"method","page.observe"},{"params",{{"tab",tab->id}}},{"timeout_ms",static_cast<int>(op->deadline-now)}},[op,receipt](Json observed){if(op->done)return;if(observed.value("ok",false))(*receipt)["observation"]=std::move(observed["result"]);else (*receipt)["observation_error"]=std::move(observed["error"]);op->Finish(Ok(*receipt));});return;
+                }
+                const auto step=*index;Json params=plan->at((*index)++);const auto action=params.at("action").get<std::string>();params.erase("action");if(action=="key"){params["action"]=params.value("key_action",std::string("press"));params.erase("key_action");}params["tab"]=tab->id;
+                (*receipt)["in_flight"]=step;(*receipt)["may_have_executed"]=action!="wait"&&action!="observe";op->Publish(*receipt);auto retained=weakNext.lock();
+                DispatchState(s,{{"method","page."+action},{"params",std::move(params)},{"timeout_ms",static_cast<int>(op->deadline-now)}},[op,receipt,retained,step,action](Json result){if(op->done)return;bool ok=result.value("ok",false);Json item{{"index",step},{"action",action},{"ok",ok}};if(ok){item["result"]=std::move(result["result"]);(*receipt)["completed"]=receipt->at("completed").get<int>()+1;receipt->erase("in_flight");(*receipt)["may_have_executed"]=false;}else{item["error"]=std::move(result["error"]);(*receipt)["status"]="failed";(*receipt)["failed_index"]=step;receipt->erase("in_flight");}(*receipt)["results"].push_back(std::move(item));op->Publish(*receipt);if(retained)(*retained)();});
+            };(*next)();return;
+        }
         if(method=="page.navigate"){auto url=p.at("url").get<std::string>();if(url.empty()||url.size()>32768)throw std::invalid_argument("URL length must be 1..32768");s->Navigate(tab,url,p.value("wait",std::string("load")),op);return;}
         if(method=="page.back"||method=="page.forward"||method=="page.reload"){
             if(method!="page.reload"){BOOL possible=FALSE;if(method=="page.back")tab->core->get_CanGoBack(&possible);else tab->core->get_CanGoForward(&possible);if(!possible){op->Finish(Fail("history_unavailable","No history entry exists in that direction"));return;}}
@@ -332,9 +444,13 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply){
         if(method=="page.stop"){tab->core->Stop();if(tab->navigation){tab->navigation->Finish(Fail("navigation_stopped","Navigation stopped by the client"));tab->navigation.reset();}op->Finish(Ok());return;}
         if(method=="page.cdp"){auto name=p.at("method").get<std::string>();if(name.size()>200||name.find('.')==std::string::npos)throw std::invalid_argument("A renderer CDP Domain.method is required");s->Cdp(tab,name,p.value("params",Json::object()),op,[op](Json value){op->Finish(Ok(value));});return;}
         if(method=="page.evaluate"){auto expression=p.at("expression").get<std::string>();if(expression.size()>512000)throw std::invalid_argument("Expression is too long");auto world=p.value("world",std::string("main"));if(world!="main"&&world!="isolated")throw std::invalid_argument("world must be main or isolated");s->Eval(tab,expression,op,[op](Json value){op->Finish(Ok({{"value",value}}));},p.value("await_promise",true),world=="isolated");return;}
-        if(method=="page.snapshot"){auto prefix=tab->id+"g"+std::to_string(tab->generation)+"s"+std::to_string(++tab->snapshot);s->Eval(tab,SnapshotScript(Json(prefix).dump()),op,[op](Json value){op->Finish(Ok(value));});return;}
+        if(method=="page.snapshot"||method=="page.observe"){
+            int maxElements=p.value("max_elements",method=="page.observe"?80:2000),maxText=p.value("max_text",method=="page.observe"?6000:120000);if(maxElements<1||maxElements>(method=="page.observe"?500:2000)||maxText<0||maxText>(method=="page.observe"?100000:120000))throw std::invalid_argument("Observation bounds exceed the supported element/text limits");
+            auto role=p.value("role",std::string()),name=p.value("name",std::string());bool include=p.value("include_text",true);auto prefix=tab->id+"g"+std::to_string(tab->generation)+"s"+std::to_string(++tab->snapshot);
+            s->Eval(tab,SnapshotScript(Json(prefix).dump()),op,[op,tab,maxElements,maxText,include,role,name](Json value){Json filtered=Json::array();size_t matched=0;for(auto& item:value.at("elements"))if((role.empty()||item.value("role",std::string())==role)&&(name.empty()||item.value("name",std::string())==name)){++matched;if(filtered.size()<static_cast<size_t>(maxElements))filtered.push_back(std::move(item));}value["elements"]=std::move(filtered);if(matched>static_cast<size_t>(maxElements))value["truncated"]=true;if(include){auto text=value.value("text",std::string());if(text.size()>static_cast<size_t>(maxText)){size_t size=static_cast<size_t>(maxText);while(size>0&&size<text.size()&&(static_cast<unsigned char>(text[size])&0xC0)==0x80)--size;text.resize(size);value["truncated"]=true;}value["text"]=std::move(text);}else value.erase("text");value["tab"]=tab->id;value["profile"]=tab->profile;value["in_private"]=tab->inPrivate;value["generation"]=tab->generation;op->Finish(Ok(std::move(value)));});return;
+        }
         if(method=="page.wait"){
-            if(!p.contains("ref")&&!p.contains("selector"))throw std::invalid_argument("A selector or snapshot ref is required");auto state=p.value("state",std::string("visible"));if(state!="visible"&&state!="hidden"&&state!="attached")throw std::invalid_argument("Wait state must be visible, hidden or attached");auto w=std::make_shared<Waiting>();w->tab=tab;w->target=p;w->state=state;w->operation=op;s->waiting.push_back(w);return;
+            if(!p.contains("ref")&&!p.contains("selector")&&!p.contains("name")&&!p.contains("role"))throw std::invalid_argument("A selector, snapshot ref or exact semantic name/role is required");auto state=p.value("state",std::string("visible"));if(state!="visible"&&state!="hidden"&&state!="attached")throw std::invalid_argument("Wait state must be visible, hidden or attached");auto w=std::make_shared<Waiting>();w->tab=tab;w->target=p;w->state=state;w->operation=op;s->waiting.push_back(w);return;
         }
         if(method=="page.click"){
             auto click=[s,tab,p,op](double x,double y){if(!std::isfinite(x)||!std::isfinite(y)||x<0||y<0)throw std::invalid_argument("Coordinates must be finite and nonnegative");const auto button=p.value("button",std::string("left"));if(button!="left"&&button!="right"&&button!="middle")throw std::invalid_argument("button must be left, right or middle");int count=p.value("click_count",1);if(count<1||count>3)throw std::invalid_argument("click_count must be 1..3");int mask=button=="left"?1:button=="right"?2:4;s->Sequence(tab,{{"Input.dispatchMouseEvent",{{"type","mouseMoved"},{"x",x},{"y",y}}},{"Input.dispatchMouseEvent",{{"type","mousePressed"},{"x",x},{"y",y},{"button",button},{"buttons",mask},{"clickCount",count}}},{"Input.dispatchMouseEvent",{{"type","mouseReleased"},{"x",x},{"y",y},{"button",button},{"buttons",0},{"clickCount",count}}}},op,{{"clicked",true},{"x",x},{"y",y}});};
@@ -426,7 +542,8 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply){
             op->Finish(Ok({{"updated",items.size()}}));return;
         }
         op->Finish(Fail("method_not_found","This browser method is not implemented",{{"method",method}}));
-    }catch(const Json::exception& e){if(op)op->Finish(Fail("invalid_argument",e.what()));else if(reply)reply(Fail("invalid_argument",e.what()));}
+    }catch(const VaultError& e){if(op)op->Finish(Fail(e.code,e.what(),{{"windows_error",e.windows_error}}));else if(reply)reply(Fail(e.code,e.what(),{{"windows_error",e.windows_error}}));}
+    catch(const Json::exception& e){if(op)op->Finish(Fail("invalid_argument",e.what()));else if(reply)reply(Fail("invalid_argument",e.what()));}
     catch(const std::invalid_argument& e){if(op)op->Finish(Fail("invalid_argument",e.what()));else if(reply)reply(Fail("invalid_argument",e.what()));}
     catch(const std::exception& e){if(op)op->Finish(Fail("operation_failed",e.what()));else if(reply)reply(Fail("operation_failed",e.what()));}
 }
@@ -445,13 +562,15 @@ LRESULT CALLBACK WindowProc(HWND window,UINT message,WPARAM wparam,LPARAM lparam
     switch(message){
     case RpcMessage:{std::unique_ptr<Envelope> envelope(reinterpret_cast<Envelope*>(lparam));if(envelope){
         unsigned queued=0;bool claimed=!envelope->phase||envelope->phase->compare_exchange_strong(queued,1);
-        if(!claimed||(envelope->canceled&&envelope->canceled->load()))envelope->reply(Fail("timeout","The request expired before UI dispatch"));else DispatchState(s,std::move(envelope->request),std::move(envelope->reply));}return 0;}
+        if(!claimed||(envelope->canceled&&envelope->canceled->load()))envelope->reply(Fail("timeout","The request expired before UI dispatch"));else DispatchState(s,std::move(envelope->request),std::move(envelope->reply),std::move(envelope->progress));}return 0;}
     case WM_SIZE:s->Layout();return 0;
     case WM_GETMINMAXINFO:{auto* bounds=reinterpret_cast<MINMAXINFO*>(lparam);bounds->ptMinTrackSize={640,400};return 0;}
     case WM_TIMER:s->Timer();return 0;
     case WM_NOTIFY:{auto* n=reinterpret_cast<NMHDR*>(lparam);if(n->idFrom==TabsId&&n->code==TCN_SELCHANGE){int index=TabCtrl_GetCurSel(s->tabsControl);if(index>=0&&static_cast<size_t>(index)<s->tabs.size())s->Activate(s->tabs[static_cast<size_t>(index)]);}return 0;}
     case WM_COMMAND:{int id=LOWORD(wparam);auto t=s->Find(s->active);if(id==NewId){int selected=static_cast<int>(SendMessageW(s->profileBox,CB_GETCURSEL,0,0));wchar_t profile[128]{};if(selected>=0)SendMessageW(s->profileBox,CB_GETLBTEXT,static_cast<WPARAM>(selected),reinterpret_cast<LPARAM>(profile));auto op=s->NewOperation([weak=s->weak_from_this()](Json result){if(auto state=weak.lock())if(!result.value("ok",false))state->Note(result["error"].value("message",std::string("Tab creation failed")));},Json::object());s->CreateTab({{"profile",selected>=0?Utf8(profile):"default"}},op);}
         else if(id==CloseId&&t)s->CloseTab(t);
+        else if(id==LoginId){HMENU menu=CreatePopupMenu();const UINT flags=MF_STRING|((t&&t->ready&&!t->inPrivate&&s->vault)?MF_ENABLED:MF_GRAYED);AppendMenuW(menu,flags,SaveLoginId,L"Save current login...");AppendMenuW(menu,flags,FillLoginId,L"Fill saved login");AppendMenuW(menu,MF_SEPARATOR,0,nullptr);AppendMenuW(menu,flags,AutoLoginId,L"Toggle auto-fill for this origin");AppendMenuW(menu,flags,ForgetLoginId,L"Forget saved login for this origin");RECT button{};GetWindowRect(GetDlgItem(window,LoginId),&button);int chosen=static_cast<int>(TrackPopupMenu(menu,TPM_RETURNCMD|TPM_LEFTALIGN|TPM_TOPALIGN,button.left,button.bottom,0,window,nullptr));DestroyMenu(menu);if(chosen)try{s->UiLogin(chosen);}catch(...){s->Note("Saved login operation could not be completed safely");}}
+        else if(id==SaveLoginId||id==FillLoginId||id==ForgetLoginId||id==AutoLoginId){try{s->UiLogin(id);}catch(...){s->Note("Saved login operation could not be completed safely");}}
         else if(id==DownloadId){s->downloadsEnabled=!s->downloadsEnabled;SetWindowTextW(GetDlgItem(window,DownloadId),s->downloadsEnabled?L"Downloads: on":L"Downloads: off");s->Note(s->downloadsEnabled?"Downloads enabled for this instance; files are never executed automatically":"Downloads blocked for this instance");}
         else if((id==GoId||id==BackId||id==ForwardId||id==ReloadId)&&t&&t->ready){Json p{{"tab",t->id}};std::string method=id==BackId?"page.back":id==ForwardId?"page.forward":id==ReloadId?"page.reload":"page.navigate";if(id==GoId){int n=GetWindowTextLengthW(s->address);std::wstring text(static_cast<size_t>(n)+1,L'\0');GetWindowTextW(s->address,text.data(),n+1);text.resize(static_cast<size_t>(n));auto url=Utf8(text);if(url.find(':')==std::string::npos)url="https://"+url;p["url"]=url;}DispatchState(s,{{"method",method},{"params",p}},[weak=s->weak_from_this()](Json result){if(auto state=weak.lock())if(!result.value("ok",false))state->Note(result["error"].value("message",std::string("Navigation failed")));});}return 0;}
     case WM_CTLCOLOREDIT:SetTextColor(reinterpret_cast<HDC>(wparam),White);SetBkColor(reinterpret_cast<HDC>(wparam),Bar);return reinterpret_cast<LRESULT>(s->barBrush);
@@ -477,12 +596,13 @@ bool Host::Create(HINSTANCE instance,const std::wstring& profileRoot,int showCom
     auto s=impl_->state;s->instance=instance;s->root=profileRoot;
     s->navyBrush=CreateSolidBrush(Navy);s->barBrush=CreateSolidBrush(Bar);s->font=CreateFontW(-15,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,L"Segoe UI");
     try{fs::create_directories(s->root);s->downloadDirectory=fs::path(s->root)/L"Downloads";fs::create_directories(s->downloadDirectory);}catch(...){return false;}
+    try{s->vault=std::make_unique<CredentialVault>(fs::path(s->root));}catch(const std::exception& exception){s->vaultError=exception.what();}
     WNDCLASSEXW wc{sizeof(wc)};wc.hInstance=instance;wc.lpfnWndProc=WindowProc;wc.lpszClassName=L"BrowserControlSdkHost";wc.hCursor=LoadCursorW(nullptr,IDC_ARROW);wc.hbrBackground=s->navyBrush;wc.hIcon=LoadIconW(nullptr,IDI_APPLICATION);RegisterClassExW(&wc);
     HWND window=CreateWindowExW(0,wc.lpszClassName,L"Browser Control SDK",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,CW_USEDEFAULT,CW_USEDEFAULT,1240,840,nullptr,nullptr,instance,s.get());if(!window)return false;
     BOOL dark=TRUE;DwmSetWindowAttribute(window,20,&dark,sizeof(dark));
     auto control=[s,window,instance](LPCWSTR cls,LPCWSTR text,DWORD style,int id){HWND h=CreateWindowExW(0,cls,text,WS_CHILD|WS_VISIBLE|style,0,0,10,10,window,reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)),instance,nullptr);SendMessageW(h,WM_SETFONT,reinterpret_cast<WPARAM>(s->font),TRUE);return h;};
     s->tabsControl=control(WC_TABCONTROLW,L"",TCS_SINGLELINE|TCS_FOCUSNEVER,TabsId);
-    for(auto item:std::vector<std::pair<int,const wchar_t*>>{{BackId,L"\x2190"},{ForwardId,L"\x2192"},{ReloadId,L"\x21bb"},{NewId,L"+"},{CloseId,L"\x00d7"},{GoId,L"Go"},{DownloadId,L"Downloads: off"}})s->buttons.push_back(control(L"BUTTON",item.second,BS_OWNERDRAW|WS_TABSTOP,item.first));
+    for(auto item:std::vector<std::pair<int,const wchar_t*>>{{BackId,L"\x2190"},{ForwardId,L"\x2192"},{ReloadId,L"\x21bb"},{NewId,L"+"},{CloseId,L"\x00d7"},{GoId,L"Go"},{LoginId,L"Logins"},{DownloadId,L"Downloads: off"}})s->buttons.push_back(control(L"BUTTON",item.second,BS_OWNERDRAW|WS_TABSTOP,item.first));
     s->address=control(L"EDIT",L"about:blank",ES_AUTOHSCROLL|WS_TABSTOP|WS_BORDER,AddressId);SetWindowSubclass(s->address,AddressProc,1,0);s->profileBox=control(WC_COMBOBOXW,L"",CBS_DROPDOWNLIST|WS_TABSTOP|WS_VSCROLL,ProfileId);
     auto profile=std::make_shared<Profile>();profile->name="default";s->profiles["default"]=profile;
     try{

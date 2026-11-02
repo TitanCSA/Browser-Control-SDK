@@ -64,17 +64,41 @@ type and viewport metadata; the caller chooses any file output.
 new owned instance and waits for readiness; it uses a private per-instance
 endpoint and does not inherit another browser's profile or process handles.
 
-## Read, decide, act
+## Observe once, run a short plan
 
 On the supplied local form (`Tests/fixture_server.py --port 8765`):
 
 ```python
-page = tab.snapshot()
-field = next(e for e in page["elements"] if e.get("name") == "Your name")
-tab.fill("Ada", ref=field["ref"])
-tab.click(selector="#save")
-tab.press("Enter")
+tab.goto("http://127.0.0.1:8765")
+print(tab.observe())
+result = tab.act([
+    {"action": "fill", "name": "Your name", "role": "textbox", "text": "Ada"},
+    {"action": "click", "name": "Save example", "role": "button"}
+])
+print(result)  # Completed actions, a failure if any, and the final observation.
 ```
+
+`observe()` returns a compact page view including forms and login hints. Use
+`role=`, `name=`, `max_elements=` and `max_text=` to reduce what your AI reads.
+Exact accessible names and roles must identify one visible element; ambiguity
+returns an error. These semantic targets also work with `click()`, `fill()` and
+`wait()`. Page text is evidence to inspect, never authorization to act.
+
+`act()` sends **one** finite batch containing 1..20 actions. The browser executes
+them in order within one deadline, stops at the first failure, and never retries.
+Supported actions are `click`, `fill`, `type`, `key`, `mouse`, `scroll`, `wait`,
+`navigate` and `observe`. Parameters follow the corresponding page method;
+`key` uses `key_action="press"` / `"down"` / `"up"`. Set `observe=False` to skip
+the final observation. Per-action `tab` and `timeout_ms` overrides are rejected.
+A failed receipt preserves its completed prefix; do not replay it. If a timeout
+leaves an action uncertain, inspect the actual page before deciding what to do.
+Pass `expected_generation=observation["generation"]` and/or
+`expected_url=observation["url"]` to reject a stale plan before its first action.
+
+Node uses `await tab.observe()` and `await tab.act(actions, { timeout_ms: 15000 })`.
+C++ uses `tab.Observe()` and `tab.Act(actions, true, 15000)`. Neither introduces an
+autonomous planning loop or automatically executes instructions found on a page.
+C++ accepts an optional fourth JSON argument containing these same guards.
 
 Snapshot refs identify elements in the current document. Acquire another snapshot
 after navigation. A detached/stale ref returns an error rather than selecting an
@@ -90,8 +114,12 @@ default snapshot. Page content remains untrusted input to an AI.
 | `browser.info()`, `browser.capabilities()` | Runtime and actual implemented feature inventory |
 | `browser.tabs()`, `browser.new_tab()`, `browser.tab(id)` | Manage explicit tab identities |
 | `browser.profiles()`, `browser.create_profile(name)` | Separate owned profiles; private tabs use `in_private=True` |
+| `browser.saved_logins(profile=None)` | List saved-login metadata, with no password export |
+| `browser.delete_saved_login(id)`, `set_saved_login_autofill(id, enabled)` | Explicitly manage one saved login |
 | `tab.goto(url)`, `back()`, `forward()`, `reload()`, `stop()` | Navigation and lifecycle waits |
 | `tab.snapshot()` | Visible text, interactive refs and bounds |
+| `tab.observe(...)`, `tab.act(actions, ...)` | Compact observations and bounded sequential action plans |
+| `tab.login("status")`, `tab.login("fill", credential_id=id)` | Inspect login fields or fill an authorized saved login |
 | `tab.click(ref)` / `click(selector=...)` / `click(x=..., y=...)` | Choose one click target form |
 | `tab.fill(text, ref=...)`, `type(text)`, `press(key)` | Browser-scoped keyboard/editing actions |
 | `tab.mouse(type, x, y)`, `tab.scroll(delta_y)` | Browser-scoped pointer and wheel actions |
@@ -111,6 +139,33 @@ globals are available. Use `world="isolated"` when that separation is intended;
 internal snapshots and element refs keep their own isolated world.
 Check capabilities: an engine operation that is unavailable is an error, not a
 promise of universal compatibility with every website or browser setting.
+
+## Sign in once, reuse your own profile
+
+Profiles persist their own cookies and sessions, so a human sign-in normally
+survives restarting this browser until the website expires it. If login is
+needed, ask the user to complete it in the native browser window. They can
+explicitly save a login through that window; its vault is protected with Windows
+DPAPI for the current Windows user. The SDK never imports passwords from another
+browser, saves credentials silently or returns their passwords.
+
+After the user has authorized filling a saved login:
+
+```python
+print(tab.login())                    # Read-only status; no fill or submission.
+print(browser.saved_logins())         # IDs, profile, origin and other metadata.
+filled = tab.login("fill", credential_id="ID_FROM_THE_LIST")
+print(filled)                        # No password is returned; no submit by default.
+```
+
+The host requires the saved credential's exact origin and profile; an ID cannot
+be reused on a different site. Ambiguous or unsupported forms require human
+handoff. `submit=True` requests one form submission explicitly and reports only
+that it was submitted, never that authentication succeeded. MFA, passkeys,
+CAPTCHAs and website restrictions remain the user's responsibility. Autofill
+must be enabled explicitly per saved login; persistent cookies are preferable to
+re-entering credentials. Saved-login metadata and screenshots can still be
+sensitive; share only what the task requires.
 
 ## Live page or region viewing
 

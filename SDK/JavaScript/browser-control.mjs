@@ -187,15 +187,38 @@ export class Browser {
   async newTab(options = {}) { const value = await this.call('tabs.create', options); return new Tab(this, value.id); }
   profiles() { return this.call('profiles.list'); }
   createProfile(name, options = {}) { return this.call('profiles.create', { ...options, name }); }
+  savedLogins(profile, origin) {
+    const options = {};
+    if (profile !== undefined) options.profile = profile;
+    if (origin !== undefined) options.origin = origin;
+    return this.call('saved_logins.list', options);
+  }
+  deleteSavedLogin(credential_id) { return this.call('saved_logins.delete', { credential_id }); }
+  setSavedLoginAutofill(credential_id, enabled) {
+    if (typeof enabled !== 'boolean') throw new TypeError('enabled must be a boolean');
+    return this.call('saved_logins.autofill', { credential_id, enabled });
+  }
   window(options) { return this.call(options ? 'window.set' : 'window.info', options ?? {}); }
   events(options = {}) { return this.call('events.read', options); }
   downloads(options) { return this.call(options ? 'downloads.configure' : 'downloads.list', options ?? {}); }
   shutdown() { return this.call('browser.shutdown'); }
 }
 
-function target({ ref, selector, x, y }) {
-  if (Number(ref !== undefined) + Number(selector !== undefined) + Number(x !== undefined || y !== undefined) !== 1 ||
-      (x === undefined) !== (y === undefined)) throw new TypeError('Specify one target: ref, selector, or both x and y');
+const ACTION_NAMES = new Set(['click', 'fill', 'type', 'key', 'mouse', 'scroll', 'wait', 'navigate', 'observe']);
+function actionsList(actions) {
+  if (!Array.isArray(actions) || actions.length < 1 || actions.length > 20 ||
+      actions.some(action => !action || Array.isArray(action) || typeof action !== 'object' || !ACTION_NAMES.has(action.action)))
+    throw new TypeError('actions must contain between 1 and 20 objects with supported action names');
+}
+function target({ ref, selector, x, y, name, role }) {
+  if (Number(ref !== undefined) + Number(selector !== undefined) + Number(x !== undefined || y !== undefined) + Number(name !== undefined) !== 1 ||
+      (x === undefined) !== (y === undefined) || (role !== undefined && name === undefined))
+    throw new TypeError('Specify one target: ref, selector, name with optional role, or both x and y');
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name || (role !== undefined && (typeof role !== 'string' || !role)))
+      throw new TypeError('A semantic target needs a nonempty name and, when supplied, role');
+    return role === undefined ? { name } : { name, role };
+  }
   return ref !== undefined ? { ref } : selector !== undefined ? { selector } : { x, y };
 }
 
@@ -216,6 +239,26 @@ export class Tab {
   reload() { return this.call('page.reload'); }
   stop() { return this.call('page.stop'); }
   snapshot() { return this.call('page.snapshot'); }
+  observe(options = {}) { return this.call('page.observe', options); }
+  act(actions, { observe = true, timeout_ms = 15000, expected_generation, expected_url } = {}) {
+    actionsList(actions);
+    if (typeof observe !== 'boolean') throw new TypeError('observe must be a boolean');
+    const guards = {};
+    if (expected_generation !== undefined) {
+      if (!Number.isSafeInteger(expected_generation) || expected_generation < 0)
+        throw new TypeError('expected_generation must be a nonnegative safe integer');
+      guards.expected_generation = expected_generation;
+    }
+    if (expected_url !== undefined) {
+      if (typeof expected_url !== 'string') throw new TypeError('expected_url must be a string');
+      guards.expected_url = expected_url;
+    }
+    return this.call('page.act', { actions, observe, ...guards }, { timeout_ms });
+  }
+  login(operation = 'status', options = {}) {
+    if (!['status', 'fill'].includes(operation)) throw new TypeError('operation must be status or fill');
+    return this.call('page.login', { ...options, operation });
+  }
   async evaluate(expression, { await_promise = true, world = 'main', timeout_ms = 15000 } = {}) {
     const value = await this.call('page.evaluate', { expression, await_promise, world }, { timeout_ms });
     return value && typeof value === 'object' && ('value' in value || value.undefined) ? value.value : value;

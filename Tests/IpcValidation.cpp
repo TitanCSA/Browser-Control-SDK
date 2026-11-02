@@ -18,6 +18,16 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lpa
         unsigned queued = 0;
         if ((command->phase && !command->phase->compare_exchange_strong(queued, 1)) ||
             (command->canceled && command->canceled->load())) return 0;
+        if (command->request["method"] == "page.act") {
+            if (command->progress) {
+                command->progress({{"completed",0},{"total",2},{"results",Json::array()},{"may_have_executed",false}});
+                ++mutations;
+                command->progress({{"completed",1},{"total",2},{"in_flight",1},{"may_have_executed",true},
+                    {"results",Json::array({{{"index",0},{"action","test.mutate"},{"ok",true},{"result",42}}})}});
+            }
+            // Model an asynchronous second action with no completion before timeout.
+            return 0;
+        }
         if (command->request["method"] == "test.mutate") ++mutations;
         command->reply(BrowserControl::Ok(command->request["params"]));
         return 0;
@@ -115,6 +125,15 @@ int main() try {
             "Queued timeout did not report pre-dispatch cancellation");
     Pump(); Require(mutations.load() == 0, "A queued timed-out command executed later");
     std::cout << "PASS atomic cancellation before dispatch\n";
+    wrong = request; wrong["method"] = "page.act"; wrong["timeout_ms"] = 60;
+    reply = Call(pipe, wrong);
+    const auto& progress = reply["error"]["details"];
+    Require(reply["error"]["code"] == "timeout" && progress["completed"] == 1 && progress["total"] == 2 &&
+            progress["results"].size() == 1 && progress["results"][0]["result"] == 42 && progress["in_flight"] == 1 &&
+            progress["may_have_executed"] == true && progress["status"] == "timed_out" && mutations.load() == 1,
+            "Strict IPC timeout lost the confirmed partial batch receipt");
+    Pump(); Require(mutations.load() == 1, "A partial batch mutation was replayed");
+    std::cout << "PASS strict deadline preserves the confirmed batch prefix without replay\n";
     HANDLE slow = Connect(pipe); Require(slow != INVALID_HANDLE_VALUE, "Cannot test a stalled peer");
     DWORD partial = 100; Exact(slow, &partial, sizeof(partial), true);
     const auto start = GetTickCount64(); server.Stop();
@@ -123,6 +142,6 @@ int main() try {
     Require(!std::filesystem::exists(endpoint), "Private endpoint was not removed on shutdown");
     std::filesystem::remove(folder);
     std::cout << "PASS prompt shutdown and private endpoint cleanup\n";
-    std::cout << "All 8 native IPC validation cases passed; no browser or website was opened.\n";
+    std::cout << "All 9 native IPC validation cases passed; no browser or website was opened.\n";
     return 0;
 } catch (const std::exception& error) { RevertToSelf(); std::cerr << "FAIL " << error.what() << '\n'; return 1; }

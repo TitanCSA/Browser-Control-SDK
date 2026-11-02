@@ -30,6 +30,9 @@ public:
     Tab GetTab(std::string id) const;
     Json Profiles() const;
     Json CreateProfile(const std::string& name, bool inPrivate = false) const;
+    Json SavedLogins(Json options = Json::object()) const;
+    Json DeleteSavedLogin(const std::string& credentialId) const;
+    Json SetSavedLoginAutofill(const std::string& credentialId, bool enabled) const;
     Json Window(Json options = Json()) const;
     Json Events(unsigned long long since = 0, unsigned limit = 100) const;
     Json Shutdown() const;
@@ -47,6 +50,9 @@ public:
     Json Activate() const;
     Json Close() const;
     Json Snapshot() const;
+    Json Observe(Json options = Json::object()) const;
+    Json Act(Json actions, bool observe = true, unsigned timeoutMs = 15000, Json guards = Json::object()) const;
+    Json Login(const std::string& operation = "status", Json options = Json::object()) const;
     Json Click(Json target) const;
     Json Fill(Json target, const std::string& text) const;
     Json Type(const std::string& text) const;

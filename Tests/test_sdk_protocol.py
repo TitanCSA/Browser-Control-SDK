@@ -106,6 +106,59 @@ class ClientTests(unittest.TestCase):
     def test_selector_and_ref_are_not_ambiguous(self):
         with self.assertRaises(ValueError): self.browser.tab("t1").click("e1", selector="#other")
         with self.assertRaises(ValueError): self.browser.tab("t1").click(x=10)
+    def test_semantic_targets_require_exact_unmixed_name(self):
+        tab = self.browser.tab("t1")
+        with patch.object(self.browser, "call", return_value={}) as call:
+            tab.fill("Ada", name="Your name", role="textbox")
+        self.assertEqual(call.call_args.args[1], {"tab":"t1", "name":"Your name", "role":"textbox", "text":"Ada"})
+        for target in ({"name":"Save", "selector":"#save"}, {"role":"button"}, {"name":""}):
+            with patch.object(self.browser, "call") as call, self.assertRaises(ValueError):
+                tab.click(**target)
+            call.assert_not_called()
+    def test_batch_preflight_checks_the_whole_plan_before_io(self):
+        tab = self.browser.tab("t1")
+        invalid = ([], [{"action":"click"}] * 21, [{"action":"click"}, {"action":"loop"}],
+                   [{"action":[]}], [{"action":"click"}, "not-an-action"])
+        for actions in invalid:
+            with patch.object(self.browser, "call") as call, self.assertRaises(ValueError):
+                tab.act(actions)
+            call.assert_not_called()
+    def test_batch_is_one_request_and_partial_result_is_not_replayed(self):
+        actions = [{"action":"fill", "name":"Your name", "text":"Ada"}, {"action":"click", "name":"Save"}]
+        partial = {"status":"failed", "completed":1, "total":2,
+                   "results":[{"index":0, "ok":True}, {"index":1, "ok":False, "error":{"code":"ambiguous_target"}}]}
+        with patch.object(self.browser, "call", return_value=partial) as call:
+            result = self.browser.tab("t1").act(actions, observe=False, timeout_ms=500)
+        self.assertIs(result, partial)
+        call.assert_called_once_with("page.act", {"tab":"t1", "actions":actions, "observe":False}, timeout_ms=500)
+        FakePipe.mode = "timeout"
+        with patch.object(sdk, "_WindowsPipe", FakePipe), self.assertRaises(sdk.BrowserError) as error:
+            self.browser.tab("t1").act(actions)
+        self.assertEqual(error.exception.code, "result_unknown")
+        self.assertEqual(FakePipe.writes, 1)
+        self.assertEqual(FakePipe.last_request["params"]["actions"], actions)
+    def test_login_status_never_implicitly_fills_or_submits(self):
+        tab = self.browser.tab("t1")
+        with patch.object(self.browser, "call", return_value={}) as call:
+            tab.login()
+        call.assert_called_once_with("page.login", {"tab":"t1", "operation":"status", "submit":False}, timeout_ms=15000)
+        with patch.object(self.browser, "call", return_value={}) as call:
+            tab.login("fill", credential_id="saved-1")
+        self.assertEqual(call.call_args.args[1]["credential_id"], "saved-1")
+        self.assertFalse(call.call_args.args[1]["submit"])
+        with patch.object(self.browser, "call", return_value={}) as call:
+            self.browser.saved_logins("owned-work")
+        call.assert_called_once_with("saved_logins.list", profile="owned-work")
+    def test_batch_guard_validation_prevents_io(self):
+        tab = self.browser.tab("t1")
+        for guards in ({"expected_generation":-1}, {"expected_generation":True}, {"expected_url":42}):
+            with patch.object(self.browser, "call") as call, self.assertRaises((ValueError, TypeError)):
+                tab.act([{"action":"click", "name":"Save"}], **guards)
+            call.assert_not_called()
+        with patch.object(self.browser, "call", return_value={}) as call:
+            tab.act([{"action":"click", "name":"Save"}], expected_generation=3, expected_url="http://localhost/")
+        self.assertEqual(call.call_args.args[1]["expected_generation"], 3)
+        self.assertEqual(call.call_args.args[1]["expected_url"], "http://localhost/")
     def test_raw_cdp_method_survives_wrapper(self):
         with patch.object(self.browser, "call", return_value={}) as call:
             self.browser.tab("t1").cdp("Runtime.evaluate", {"expression": "1+1"})
@@ -134,6 +187,13 @@ class ClientTests(unittest.TestCase):
 class FakeTab:
     def screenshot(self, **_options):
         return {"data": base64.b64encode(b"test-image").decode(), "mime_type": "image/png", "width": 1, "height": 1}
+    def observe(self, **options):
+        return {"elements":[], "options":options}
+    def act(self, actions, **options):
+        return {"status":"failed", "completed":1, "total":len(actions), "options":options,
+                "results":[{"index":0,"ok":True}, {"index":1,"ok":False,"error":{"code":"target_not_found"}}]}
+    def login(self, operation, **options):
+        return {"operation":operation, "options":options, "password_fields":1}
 
 
 class FakeBrowser:
@@ -174,6 +234,47 @@ class McpTests(unittest.TestCase):
             "params": {"name": "browser_call", "arguments": {"method": "page.click", "params": {"tab": "t1", "ref": "e1"}}}})["result"]
         self.assertTrue(result["isError"])
         self.assertTrue(json.loads(result["content"][0]["text"])["details"]["may_have_executed"])
+    def test_finite_batch_failure_keeps_partial_receipt_and_marks_tool_error(self):
+        self.legacy()
+        result = self.bridge.request({"jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{
+            "name":"browser_act", "arguments":{"tab":"t1", "actions":[{"action":"click", "name":"Save"},
+                                                                                 {"action":"click", "name":"Missing"}]}}})["result"]
+        value = json.loads(result["content"][0]["text"])
+        self.assertTrue(result["isError"])
+        self.assertEqual(value["completed"], 1)
+        self.assertEqual(value["results"][1]["error"]["code"], "target_not_found")
+    def test_mcp_batch_bound_is_checked_before_connecting(self):
+        bridge = mcp.Bridge()
+        bridge.request({"jsonrpc":"2.0", "id":1, "method":"initialize", "params":{}})
+        for actions in ([], [{"action":"click"}] * 21, [{"action":"loop"}], ["bad"]):
+            with patch.object(bridge, "connected") as connect, self.assertRaises(mcp.RpcError):
+                bridge.request({"jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{
+                    "name":"browser_act", "arguments":{"tab":"t1", "actions":actions}}})
+            connect.assert_not_called()
+    def test_mcp_login_status_does_not_opt_into_submission(self):
+        self.legacy()
+        result = self.bridge.request({"jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{
+            "name":"browser_login", "arguments":{"tab":"t1"}}})["result"]
+        value = json.loads(result["content"][0]["text"])
+        self.assertEqual(value["operation"], "status")
+        self.assertFalse(value["options"]["submit"])
+    def test_compact_tools_can_use_active_tab_without_inventory_call(self):
+        self.legacy()
+        actions = [{"action":"click", "name":"Save"}]
+        cases = (("browser_observe", {}, "page.observe", {}, 15000),
+                 ("browser_login", {}, "page.login", {"operation":"status", "submit":False}, 15000),
+                 ("browser_act", {"actions":actions, "expected_generation":2, "timeout_ms":500},
+                  "page.act", {"actions":actions, "expected_generation":2}, 500))
+        for name, arguments, method, params, timeout_ms in cases:
+            with patch.object(self.bridge.browser, "call", return_value={"tab":"active-1"}) as call:
+                result = self.bridge.request({"jsonrpc":"2.0", "id":2, "method":"tools/call",
+                    "params":{"name":name, "arguments":arguments}})["result"]
+            self.assertFalse(result["isError"])
+            if name == "browser_observe":
+                call.assert_called_once_with(method, params)
+            else:
+                if name == "browser_login": call.assert_called_once_with(method, params)
+                else: call.assert_called_once_with(method, params, timeout_ms=timeout_ms)
     def test_stdio_emits_only_json_and_preserves_ids(self):
         requests = [{"jsonrpc": "2.0", "id": "first", "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
                     {"jsonrpc": "2.0", "method": "notifications/initialized"},

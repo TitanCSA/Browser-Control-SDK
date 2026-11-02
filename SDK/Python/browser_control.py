@@ -345,6 +345,19 @@ class Browser:
     def create_profile(self, name: str, *, in_private: bool = False):
         return self.call("profiles.create", name=name, in_private=in_private)
 
+    def saved_logins(self, profile: str | None = None, origin: str | None = None):
+        """List saved-login metadata only. Passwords never leave the browser vault."""
+        options = {key: value for key, value in (("profile", profile), ("origin", origin)) if value is not None}
+        return self.call("saved_logins.list", **options)
+
+    def delete_saved_login(self, credential_id: str):
+        return self.call("saved_logins.delete", credential_id=credential_id)
+
+    def set_saved_login_autofill(self, credential_id: str, enabled: bool):
+        if not isinstance(enabled, bool):
+            raise TypeError("enabled must be a boolean")
+        return self.call("saved_logins.autofill", credential_id=credential_id, enabled=enabled)
+
     def window(self, **options):
         return self.call("window.set" if options else "window.info", **options)
 
@@ -396,22 +409,67 @@ class Tab:
     def snapshot(self):
         return self.call("page.snapshot")
 
+    def observe(self, *, max_elements: int = 80, max_text: int = 6000, include_text: bool = True,
+                role: str | None = None, name: str | None = None):
+        options = {"max_elements": max_elements, "max_text": max_text, "include_text": include_text}
+        if role is not None:
+            options["role"] = role
+        if name is not None:
+            options["name"] = name
+        return self.call("page.observe", **options)
+
+    def act(self, actions: list[dict], *, observe: bool = True, timeout_ms: int = 15000,
+            expected_generation: int | None = None, expected_url: str | None = None):
+        """Run one finite native batch; stop on first error, without retries."""
+        _actions(actions)
+        if not isinstance(observe, bool):
+            raise TypeError("observe must be a boolean")
+        guards = {}
+        if expected_generation is not None:
+            if type(expected_generation) is not int or not 0 <= expected_generation <= 0xffffffffffffffff:
+                raise ValueError("expected_generation must be an unsigned integer")
+            guards["expected_generation"] = expected_generation
+        if expected_url is not None:
+            if not isinstance(expected_url, str):
+                raise TypeError("expected_url must be a string")
+            guards["expected_url"] = expected_url
+        return self.call("page.act", actions=actions, observe=observe, timeout_ms=timeout_ms, **guards)
+
+    def login(self, operation: str = "status", *, credential_id: str | None = None, submit: bool = False):
+        """Inspect login fields, or explicitly fill a saved login authorized by the user.
+
+        Filling requires the saved login's exact origin and profile. Passwords
+        are never exported; submission requires submit=True explicitly. Status
+        never fills anything. Submission does not prove authentication.
+        """
+        if operation not in ("status", "fill"):
+            raise ValueError("operation must be status or fill")
+        if not isinstance(submit, bool):
+            raise TypeError("submit must be a boolean")
+        params = {"operation": operation, "submit": submit}
+        if credential_id is not None:
+            params["credential_id"] = credential_id
+        return self.call("page.login", **params)
+
     def evaluate(self, expression: str, *, await_promise: bool = True, world: str = "main", timeout_ms: int = 15000):
         value = self.call("page.evaluate", expression=expression, await_promise=await_promise, world=world, timeout_ms=timeout_ms)
         return value.get("value") if isinstance(value, dict) and ("value" in value or value.get("undefined")) else value
 
     def wait(self, *, selector: str | None = None, ref: str | None = None,
+             name: str | None = None, role: str | None = None,
              state: str = "visible", timeout_ms: int = 15000):
-        target = _target(ref, selector)
+        target = _target(ref, selector, name=name, role=role)
         return self.browser.call("page.wait", {"tab": self.id, **target, "state": state,
                                               "timeout_ms": timeout_ms}, timeout_ms=timeout_ms)
 
     def click(self, ref: str | None = None, *, selector: str | None = None,
+              name: str | None = None, role: str | None = None,
               x: float | None = None, y: float | None = None, button: str = "left", click_count: int = 1):
-        return self.call("page.click", **_target(ref, selector, x, y), button=button, click_count=click_count)
+        return self.call("page.click", **_target(ref, selector, x, y, name=name, role=role), button=button, click_count=click_count)
 
-    def fill(self, text: str, *, ref: str | None = None, selector: str | None = None):
-        return self.call("page.fill", **_target(ref, selector), text=text)
+    def fill(self, text: str, *, ref: str | None = None, selector: str | None = None,
+             name: str | None = None, role: str | None = None):
+        return self.call("page.fill", **_target(ref, selector, name=name, role=role), text=text)
 
     def type(self, text: str):
         return self.call("page.type", text=text)
@@ -480,12 +538,29 @@ class Tab:
         return self.browser.call("page.cdp", {"tab": self.id, "method": method, "params": params or {}})
 
 
-def _target(ref=None, selector=None, x=None, y=None):
-    choices = int(ref is not None) + int(selector is not None) + int(x is not None or y is not None)
-    if choices != 1 or ((x is None) != (y is None)):
-        raise ValueError("Specify one target: ref, selector, or both x and y")
+_ACTION_NAMES = frozenset(("click", "fill", "type", "key", "mouse", "scroll", "wait", "navigate", "observe"))
+
+
+def _actions(actions):
+    if not isinstance(actions, list) or not 1 <= len(actions) <= 20:
+        raise ValueError("actions must be a list containing between 1 and 20 actions")
+    for action in actions:
+        if (not isinstance(action, dict) or not isinstance(action.get("action"), str) or
+                action["action"] not in _ACTION_NAMES):
+            raise ValueError("Each action must be an object with a supported action name")
+
+
+def _target(ref=None, selector=None, x=None, y=None, *, name=None, role=None):
+    choices = (int(ref is not None) + int(selector is not None) +
+               int(x is not None or y is not None) + int(name is not None))
+    if choices != 1 or ((x is None) != (y is None)) or (role is not None and name is None):
+        raise ValueError("Specify one target: ref, selector, name with optional role, or both x and y")
     if ref is not None:
         return {"ref": ref}
     if selector is not None:
         return {"selector": selector}
+    if name is not None:
+        if not isinstance(name, str) or not name or (role is not None and (not isinstance(role, str) or not role)):
+            raise ValueError("A semantic target needs a nonempty name and, when supplied, role")
+        return {"name": name, **({"role": role} if role is not None else {})}
     return {"x": x, "y": y}

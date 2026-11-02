@@ -224,6 +224,9 @@ Tab Browser::NewTab(Json options) const { const auto value = Call("tabs.create",
 Tab Browser::GetTab(std::string id) const { return Tab(connection_, std::move(id)); }
 Json Browser::Profiles() const { return Call("profiles.list"); }
 Json Browser::CreateProfile(const std::string& name, bool inPrivate) const { return Call("profiles.create", {{"name", name}, {"in_private", inPrivate}}); }
+Json Browser::SavedLogins(Json options) const { return Call("saved_logins.list", std::move(options)); }
+Json Browser::DeleteSavedLogin(const std::string& credentialId) const { return Call("saved_logins.delete", {{"credential_id", credentialId}}); }
+Json Browser::SetSavedLoginAutofill(const std::string& credentialId, bool enabled) const { return Call("saved_logins.autofill", {{"credential_id", credentialId}, {"enabled", enabled}}); }
 Json Browser::Window(Json options) const { return options.is_null() ? Call("window.info") : Call("window.set", std::move(options)); }
 Json Browser::Events(unsigned long long since, unsigned limit) const { return Call("events.read", {{"since", since}, {"limit", limit}}); }
 Json Browser::Shutdown() const { return Call("browser.shutdown"); }
@@ -234,6 +237,35 @@ Json Tab::Info() const { return Call("page.info"); }
 Json Tab::Activate() const { return Call("tabs.activate"); }
 Json Tab::Close() const { return Call("tabs.close"); }
 Json Tab::Snapshot() const { return Call("page.snapshot"); }
+Json Tab::Observe(Json options) const { return Call("page.observe", std::move(options)); }
+Json Tab::Act(Json actions, bool observe, unsigned timeoutMs, Json guards) const {
+    Object(guards);
+    for (const auto& item : guards.items())
+        if ((item.key() != "expected_generation" && item.key() != "expected_url") ||
+            (item.key() == "expected_generation" && !item.value().is_number_unsigned() &&
+             (!item.value().is_number_integer() || item.value().get<long long>() < 0)) ||
+            (item.key() == "expected_url" && !item.value().is_string()))
+            throw std::invalid_argument("Only expected_generation (unsigned) and expected_url (string) guards are accepted");
+    if (!actions.is_array() || actions.empty() || actions.size() > 20)
+        throw std::invalid_argument("actions must contain between 1 and 20 action objects");
+    for (const auto& action : actions) {
+        if (!action.is_object() || !action.contains("action") || !action["action"].is_string())
+            throw std::invalid_argument("Each action must have a supported action name");
+        const auto name = action["action"].get<std::string>();
+        if (name != "click" && name != "fill" && name != "type" && name != "key" && name != "mouse" &&
+            name != "scroll" && name != "wait" && name != "navigate" && name != "observe")
+            throw std::invalid_argument("Each action must have a supported action name");
+    }
+    guards["actions"] = std::move(actions);
+    guards["observe"] = observe;
+    return Call("page.act", std::move(guards), timeoutMs);
+}
+Json Tab::Login(const std::string& operation, Json options) const {
+    Object(options);
+    if (operation != "status" && operation != "fill") throw std::invalid_argument("operation must be status or fill");
+    options["operation"] = operation;
+    return Call("page.login", std::move(options));
+}
 Json Tab::Click(Json target) const { return Call("page.click", std::move(target)); }
 Json Tab::Fill(Json target, const std::string& text) const { Object(target); target["text"] = text; return Call("page.fill", std::move(target)); }
 Json Tab::Type(const std::string& text) const { return Call("page.type", {{"text", text}}); }

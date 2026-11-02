@@ -85,6 +85,53 @@ Typed helpers cover common actions. `browser.call(method, params)` and the C++
 `browser.capabilities()` reports the implemented methods and engine boundaries.
 See [Examples](Examples) for independent, small scripts.
 
+## Faster AI workflows
+
+**`observe()`** returns a compact page view with labelled controls. **`act()`**
+executes a finite plan in one SDK request and returns the resulting observation.
+Targets accept exact accessible names and roles, selectors or snapshot refs.
+
+```python
+page = tab.observe(max_elements=40, max_text=3000)
+result = tab.act([
+    {"action": "fill", "name": "Your name", "role": "textbox", "text": "Ada"},
+    {"action": "click", "name": "Save example", "role": "button"},
+], expected_generation=page["generation"])
+print(result["observation"])
+```
+
+Run this against the supplied local fixture. Plans contain at most 20 actions,
+stop on the first failure and report completed steps without replaying mutations.
+Optional generation/URL guards reject outdated plans. MCP **`browser_observe`**
+and **`browser_act`** can use the active tab without a tab-list call.
+See the [AI examples](Examples/README.md).
+
+## Sign in once, keep the session
+
+A human can sign in normally in a persistent profile. Its cookies and site
+storage remain with that profile when the website permits it.
+
+For an optional password fallback, enter the credentials on the site's sign-in
+form and choose **Logins → Save current login**. Confirm the exact site and
+profile. Saved logins are encrypted with **Windows current-user DPAPI**. Use
+**Fill saved login** later, or explicitly enable automatic filling for that login.
+The native menu lets you choose between multiple saved accounts.
+
+```python
+status = tab.login()                         # Status only.
+if status["available"]:
+    result = tab.login("fill", submit=True)  # One explicit form submission.
+```
+
+Select `credential_id=` when several accounts match. Filling requires the saved
+**exact origin and profile**. Automatic filling never submits forms; `submit=True`
+is an explicit SDK choice and does not certify successful sign-in. Login results
+and observations omit passwords. Saving/filling requires HTTPS, with loopback HTTP
+allowed for the fictitious tests. Private profiles cannot use the vault.
+
+Sites can expire cookies, require MFA/passkeys or reject embedded browsers, so
+some connections still need human input. [Sessions and saved logins](docs/SESSIONS.md).
+
 ## Use with an AI
 
 Connect the supplied [MCP server](MCP/README.md) to a client that supports local

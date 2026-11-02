@@ -44,6 +44,24 @@ explicitly asks them to. Profiles retain their own ordinary browser data until
 you choose to remove it; closing a tab is not secure deletion. In-private contexts
 use the runtime's private profile mode, with no claim of memory-forensic secrecy.
 
+Saved passwords use an additional current-user DPAPI vault in the private data
+root. Saving requires explicit native UI confirmation. Fills match an exact
+scheme/host/port and profile; private profiles cannot use the vault. List/status
+operations return metadata and login helper errors are sanitized. The SDK/MCP
+has no password-save or password-export endpoint. Ordinary observations redact
+passwords, username-autocomplete fields and text fields in password forms.
+
+This protection is for data at rest: an authorized client can deliberately
+evaluate a page, and a website receives the password when its form is filled.
+Same-user malicious code and administrators remain outside the boundary.
+Temporary in-process copies are cleared where practical, without a forensic
+memory-secrecy claim. [Session handling and limits](SESSIONS.md).
+
+Action plans are bounded and stop at the first error. Confirmed partial receipts
+are published to the transport without adding a timeout grace period. The host
+uses the original absolute deadline, including UI queue time. An in-flight step
+can still have effects; inspect its uncertainty before deciding what to retry.
+
 The app provides general browser controls, not hidden-account login, challenge
 solving, block evasion or unrestricted operating-system automation. Third-party
 authentication restrictions can prevent an embedded browser from completing a
