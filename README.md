@@ -170,6 +170,11 @@ Website access controls, MFA and CAPTCHA still require the site's normal flow.
 
 ## Build
 
+For practical examples of [persistent sessions, human checkpoints and explicit
+tab selection](docs/WORKFLOWS.md), see the workflow guide and matching Python,
+JavaScript and C++ examples. It also explains safe continuation after a failed
+submission and the difference between profiles and browser instances.
+
 Windows x64, Visual Studio 2022 C++ tools, a Windows SDK, CMake 3.24+ and Python
 3.10+ for client validation:
 

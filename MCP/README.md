@@ -1,5 +1,41 @@
 # Connect an AI client through MCP
 
+## Profiles and instances
+
+One MCP server connection controls one Browser Control instance. That instance
+can contain tabs in several saved profiles. Use `browser_call` with
+`{"method":"profiles.list","params":{}}` to discover existing profile names,
+then `browser_tabs` with `{"operation":"create","profile":"work","url":"http://localhost:8765/"}`
+to create a tab in an existing profile named `work`. Keep the returned tab ID
+in subsequent calls so switching the visible tab does not change the target.
+
+Two independently running browser instances need two MCP server entries, each
+with an explicit `--endpoint` pointing to that instance's private endpoint file:
+
+```json
+{
+  "mcpServers": {
+    "browser-work": {
+      "command": "python",
+      "args": ["C:\\Tools\\Browser-Control-SDK\\MCP\\server.py", "--endpoint", "C:\\Private\\work-endpoint.json"]
+    },
+    "browser-personal": {
+      "command": "python",
+      "args": ["C:\\Tools\\Browser-Control-SDK\\MCP\\server.py", "--endpoint", "C:\\Private\\personal-endpoint.json"]
+    }
+  }
+}
+```
+
+These paths are placeholders: use the endpoint files of your actual instances.
+Keep their contents private; never paste capability tokens into shared configs.
+`--profile-root` chooses storage for an instance started with `--launch`; it does
+not select a saved profile for each tool call. Default discovery picks the newest
+responding owned instance, so use explicit endpoints when that is ambiguous.
+See [session and checkpoint examples](../docs/WORKFLOWS.md).
+
+## Connect
+
 `server.py` exposes the SDK as a local stdio MCP server using Python 3.10+ and its
 standard library. There is no network listener. It supports legacy revisions
 `2024-11-05`, `2025-06-18`, `2025-11-25` and modern per-request revision

@@ -53,6 +53,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/SDK/Cpp/BrowserControl.cpp")
     if(EXISTS "${CMAKE_SOURCE_DIR}/Examples/cpp_basic.cpp")
         add_executable(BrowserControlExample Examples/cpp_basic.cpp)
         target_link_libraries(BrowserControlExample PRIVATE BrowserControlSDK)
+        add_executable(BrowserCheckpointExample Examples/human_checkpoint.cpp)
+        target_link_libraries(BrowserCheckpointExample PRIVATE BrowserControlSDK)
     endif()
 endif()
 

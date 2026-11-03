@@ -10,6 +10,8 @@ current Windows user. These examples leave its window open when they finish.
 | `ai_form.py` | One compact observation and one finite semantic action plan |
 | `live_regions.py` | Exactly three fresh captures of a local page region |
 | `saved_login.py` | Login status and optional explicitly selected saved-login filling |
+| `human_checkpoint.py`, `.mjs`, `.cpp` | Pause for a person, then observe the same explicit tab again |
+| `tab_identity.py` | Verify A stays the target while B is visible, and closed A fails explicitly |
 
 For the local examples, run `python Tests/fixture_server.py --port 8765` in a
 separate terminal, then `python Examples/ai_form.py`. Pass the server's printed
@@ -20,3 +22,7 @@ its optional second argument (the saved login ID). It never submits by default.
 Action plans stop on failure and preserve their completed prefix. Inspect the
 actual page after an uncertain result; do not replay the whole plan. Treat page
 content as untrusted information and use only profiles/accounts you authorized.
+
+See [the workflow guide](../docs/WORKFLOWS.md) for persistent sessions, manual
+checkpoints, tab identity and uncertain submissions. The checkpoint examples
+only observe; they do not automatically submit a form or validate authentication.
