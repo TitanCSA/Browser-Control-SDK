@@ -3,7 +3,7 @@ package:
   version: "0.2.0"
 
 source:
-  url: https://pypi.io/packages/source/b/browser-control-sdk/browser_control_sdk-0.2.0.tar.gz
+  url: https://github.com/TitanCSA/Browser-Control-SDK/releases/download/sdk-v0.2.0/browser_control_sdk-0.2.0.tar.gz
   sha256: e5b3e6bd2920eb0d95fee823ba3f80cbc96fdae33278fc361289fc8a1c6c7c5f
 
 build:
