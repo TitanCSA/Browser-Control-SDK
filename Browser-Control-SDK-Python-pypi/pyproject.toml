@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "browser-control-sdk"
-version = "0.2.0"
+version = "0.2.1"
 description = "Standard-library Python client for the local Windows Browser Control SDK"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,3 +21,6 @@ Repository = "https://github.com/TitanCSA/Browser-Control-SDK"
 
 [tool.setuptools]
 py-modules = ["browser_control"]
+
+[tool.setuptools.data-files]
+"share/doc/browser-control-sdk" = ["docs/SDK.md", "examples/browser.py", "LICENSE"]
