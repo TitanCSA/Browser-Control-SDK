@@ -33,11 +33,19 @@
       "directory": "Browser-Control-SDK-Python-conda-forge",
       "central_registry_status": "not_published",
       "distribution": "GitHub source and downloadable release artifacts"
+    },
+    {
+      "directory": "Browser-Control-SDK-Ruby-rubygems",
+      "registry": "RubyGems",
+      "name": "browser-control-sdk",
+      "version": "0.2.1",
+      "distribution": "RubyGems and GitHub release"
     }
   ],
   "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented.",
   "native_source_archive": {
     "url": "https://github.com/TitanCSA/Browser-Control-SDK/releases/download/sdk-v0.2.0/browser-control-sdk-sdk-0.2.0.tar.gz",
     "sha256": "889c5baf8c1595fa392e425f92cd1c270655e045a7721975caebfedc7e63066d"
-  }
+  },
+  "c_abi_bridge": "Browser-Control-SDK-C-ffi"
 }
