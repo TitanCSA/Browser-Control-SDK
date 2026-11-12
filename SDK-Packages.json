@@ -60,9 +60,14 @@
     "CPP/vcpkg": {
       "status": "published_custom_registry",
       "registry": "https://github.com/TitanCSA/vcpkg-registry",
-      "baseline": "2a5f4f4037f5fbd911344250e43e7a1d48e04fe6",
-      "port": "browser-control-sdk-sdk",
-      "microsoft_curated_registry": false
+      "baseline": "33fd43f72d7137f6ebaac4c1eeab001f66bf3a98",
+      "port": "browser-control-sdk",
+      "microsoft_curated_registry": false,
+      "legacy_port": "browser-control-sdk-sdk",
+      "registry_selection_packages": [
+        "browser-control-sdk",
+        "browser-control-sdk-sdk"
+      ]
     },
     "CPP/conan": {
       "status": "public_recipe_builds_locally",
@@ -131,7 +136,7 @@
       "public_consumer_verified": true
     },
     "Go/pkg-go-dev": {
-      "status": "indexing_pending",
+      "status": "indexed_verified",
       "url": "https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1"
     },
     "PowerShell/gallery": {
