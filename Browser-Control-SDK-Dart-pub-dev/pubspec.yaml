@@ -1,0 +1,10 @@
+name: browser_control_sdk
+description: Direct native Windows x64 SDK for BrowserControl, with all JSON protocol methods, bounded transport and structured errors.
+version: 0.2.1
+homepage: https://github.com/TitanCSA/Browser-Control-SDK
+repository: https://github.com/TitanCSA/Browser-Control-SDK
+documentation: https://github.com/TitanCSA/Browser-Control-SDK/tree/main/Browser-Control-SDK-Dart-pub-dev/doc
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+platforms:
+  windows:

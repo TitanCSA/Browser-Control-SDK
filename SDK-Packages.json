@@ -47,6 +47,13 @@
       "module": "github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules",
       "version": "v0.2.1",
       "distribution": "Public Go proxy, with embedded native DLL and documentation"
+    },
+    {
+      "directory": "Browser-Control-SDK-Dart-pub-dev",
+      "registry": "pub.dev",
+      "name": "browser_control_sdk",
+      "version": "0.2.1",
+      "distribution": "Dart FFI package; Flutter deployment requires bundling the DLL as documented"
     }
   ],
   "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented.",
