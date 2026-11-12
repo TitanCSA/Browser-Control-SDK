@@ -1,5 +1,5 @@
 {
-  "name": "@titancsa/browser-control-sdk",
+  "name": "browser-control-sdk",
   "version": "0.2.0",
   "description": "Dependency-free Node.js client for the local Windows Browser Control SDK",
   "type": "module",
@@ -7,14 +7,24 @@
   "files": [
     "browser-control.mjs",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "docs/",
+    "examples/"
   ],
   "engines": {
     "node": ">=18"
   },
   "license": "MIT",
-  "repository": "https://github.com/TitanCSA/Browser-Control-SDK",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TitanCSA/Browser-Control-SDK.git",
+    "directory": "Browser-Control-SDK-JavaScript-npm"
+  },
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://github.com/TitanCSA/Browser-Control-SDK/tree/main/Browser-Control-SDK-JavaScript-npm#readme",
+  "bugs": {
+    "url": "https://github.com/TitanCSA/Browser-Control-SDK/issues"
   }
 }
