@@ -2,7 +2,7 @@ require 'json'
 require 'fiddle/import'
 require 'thread'
 module BrowserControlSDK
-  VERSION = '0.2.1'
+  VERSION = '0.2.2'
   class Error < StandardError
     attr_reader :code, :details
     def initialize(data)
