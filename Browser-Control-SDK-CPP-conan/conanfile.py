@@ -1,3 +1,5 @@
+from conan.tools.files import copy
+from os.path import join
 from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
 from conan.tools.cmake import CMake, cmake_layout
@@ -20,6 +22,9 @@ class NativeSDK(ConanFile):
         cmake.build()
     def package(self):
         CMake(self).install()
+        copy(self, "LICENSE", self.source_folder, join(self.package_folder, "licenses"))
+        copy(self, "NOTICE*", self.source_folder, join(self.package_folder, "licenses"))
+        copy(self, "*", join(self.source_folder, "licenses"), join(self.package_folder, "licenses", "upstream"))
     def package_info(self):
         self.cpp_info.libs = ["TitanBrowserControlSDK"]
         self.cpp_info.includedirs = ['include', 'include/SDK/Cpp', 'include/ThirdParty/nlohmann', 'include/ThirdParty']
