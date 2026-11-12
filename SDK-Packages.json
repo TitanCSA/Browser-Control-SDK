@@ -2,19 +2,22 @@
   "project": "Browser-Control-SDK",
   "packages": [
     {
-      "directory": "Browser-Control-SDK-CPP-vcpkg",
+      "directory": "packaging/native",
       "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts"
+      "distribution": "GitHub source and downloadable release artifacts",
+      "source_layout": "Shared native SDK source; registry recipes are kept alongside CMakeLists.txt."
     },
     {
-      "directory": "Browser-Control-SDK-CPP-conan",
+      "directory": "packaging/native",
       "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts"
+      "distribution": "GitHub source and downloadable release artifacts",
+      "source_layout": "Shared native SDK source; registry recipes are kept alongside CMakeLists.txt."
     },
     {
-      "directory": "Browser-Control-SDK-CPP-nuget",
+      "directory": "packaging/native",
       "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts"
+      "distribution": "GitHub source and downloadable release artifacts",
+      "source_layout": "Shared native SDK source; registry recipes are kept alongside CMakeLists.txt."
     },
     {
       "directory": "Browser-Control-SDK-Python-pypi",
@@ -32,5 +35,9 @@
       "distribution": "GitHub source and downloadable release artifacts"
     }
   ],
-  "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented."
+  "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented.",
+  "native_source_archive": {
+    "url": "https://github.com/TitanCSA/Browser-Control-SDK/releases/download/sdk-v0.2.0/browser-control-sdk-sdk-0.2.0.tar.gz",
+    "sha256": "889c5baf8c1595fa392e425f92cd1c270655e045a7721975caebfedc7e63066d"
+  }
 }
