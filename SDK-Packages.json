@@ -175,5 +175,16 @@
       "status": "binding_not_implemented"
     }
   },
-  "coverage_note": "Missing language bindings are explicitly listed. Published GitHub archives are distinct from central registry acceptance. Local organized SDK folders are retained."
+  "coverage_note": "Missing language bindings are explicitly listed. Published GitHub archives are distinct from central registry acceptance. Local organized SDK folders are retained.",
+  "c_abi_release": {
+    "project": "Browser-Control-SDK",
+    "status": "published_c_consumer_verified",
+    "release": "https://github.com/TitanCSA/Browser-Control-SDK/releases/tag/c-abi-sdk-v0.2.2",
+    "archive": "https://github.com/TitanCSA/Browser-Control-SDK/releases/download/c-abi-sdk-v0.2.2/browser-control-sdk-c-0.2.2-win-x64.zip",
+    "sha256": "eb1c5d4ebb0cbd1803fe31519bd6ace130612ee21a71919a8372d4f7403ef198",
+    "version": "0.2.2",
+    "c_consumer_compile_link_run_passed": true,
+    "central_registry": false,
+    "public_archive_consumer_passed": true
+  }
 }

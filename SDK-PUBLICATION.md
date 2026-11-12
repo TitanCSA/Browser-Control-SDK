@@ -23,4 +23,6 @@ Current source layout and registry coverage. A GitHub download is distinct from 
 
 Native SDK source and CMake/Conan/vcpkg/NuGet recipes share [`packaging/native`](packaging/native/LAYOUT.md). Previous release archives and tags remain unchanged.
 
+C ABI header, import library and native DLL: [Windows x64 SDK archive](https://github.com/TitanCSA/Browser-Control-SDK/releases/tag/c-abi-sdk-v0.2.2). This GitHub archive is separate from central-registry packages.
+
 Application and driver prerequisites and original licensing remain those documented by each SDK. No driver installer is bundled with these source packages.
