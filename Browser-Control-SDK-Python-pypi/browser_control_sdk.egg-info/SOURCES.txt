@@ -1,0 +1,9 @@
+LICENSE
+NOTICE
+README.md
+browser_control.py
+pyproject.toml
+browser_control_sdk.egg-info/PKG-INFO
+browser_control_sdk.egg-info/SOURCES.txt
+browser_control_sdk.egg-info/dependency_links.txt
+browser_control_sdk.egg-info/top_level.txt

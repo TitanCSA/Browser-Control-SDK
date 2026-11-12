@@ -1,0 +1,35 @@
+package:
+  name: browser-control-sdk
+  version: "0.2.0"
+
+source:
+  url: https://pypi.io/packages/source/b/browser-control-sdk/browser_control_sdk-0.2.0.tar.gz
+  sha256: e5b3e6bd2920eb0d95fee823ba3f80cbc96fdae33278fc361289fc8a1c6c7c5f
+
+build:
+  number: 0
+  skip: true  # [not win64]
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - setuptools >=68
+    - wheel
+  run:
+    - python >=3.10
+
+test:
+  imports:
+    - browser_control
+
+about:
+  home: https://github.com/TitanCSA/Browser-Control-SDK
+  summary: Windows x64 Browser-Control-SDK SDK; driver or application installed separately.
+  license: MIT
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    - TitanCSA
