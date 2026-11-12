@@ -40,6 +40,13 @@
       "name": "browser-control-sdk",
       "version": "0.2.2",
       "distribution": "RubyGems and GitHub release"
+    },
+    {
+      "directory": "Browser-Control-SDK-Go-modules",
+      "registry": "Go Modules",
+      "module": "github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules",
+      "version": "v0.2.1",
+      "distribution": "Public Go proxy, with embedded native DLL and documentation"
     }
   ],
   "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented.",
