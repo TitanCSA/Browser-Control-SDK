@@ -133,7 +133,7 @@ default snapshot. Page content remains untrusted input to an AI.
 | `browser.call(method, params)` | All methods through the same bounded protocol |
 
 Node and C++ provide the corresponding camelCase/PascalCase operations. All
-clients expose generic calls for the full [protocol](../Protocol/API.md).
+clients expose generic calls for the full [protocol](https://github.com/TitanCSA/Browser-Control-SDK/blob/main/Protocol/API.md).
 Evaluation uses the page's main JavaScript world by default so application
 globals are available. Use `world="isolated"` when that separation is intended;
 internal snapshots and element refs keep their own isolated world.
@@ -194,7 +194,7 @@ for await (const frame of tab.frames({ interval_ms: 100, signal: stop.signal }))
 }
 ```
 
-For a finite local demonstration, [live_regions.py](../Examples/live_regions.py)
+For a finite local demonstration, [live_regions.py](https://github.com/TitanCSA/Browser-Control-SDK/blob/main/Examples/live_regions.py)
 saves exactly three region captures. Start `Tests/fixture_server.py --port 8765`
 first or pass that server's printed URL as the example's only argument.
 
