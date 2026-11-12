@@ -3,21 +3,15 @@
   "packages": [
     {
       "directory": "packaging/native",
-      "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts",
-      "source_layout": "Shared native SDK source; registry recipes are kept alongside CMakeLists.txt."
-    },
-    {
-      "directory": "packaging/native",
-      "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts",
-      "source_layout": "Shared native SDK source; registry recipes are kept alongside CMakeLists.txt."
-    },
-    {
-      "directory": "packaging/native",
-      "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts",
-      "source_layout": "Shared native SDK source; registry recipes are kept alongside CMakeLists.txt."
+      "build_system": "CMake",
+      "registry_recipes": {
+        "vcpkg": "packaging/native/portfile.cmake",
+        "Conan": "packaging/native/conanfile.py",
+        "NuGet": [
+          "packaging/native/TitanCSA.BrowserControlSDK.Native.nuspec"
+        ]
+      },
+      "distribution": "Shared native source; registry publication is reported separately below"
     },
     {
       "directory": "Browser-Control-SDK-Python-pypi",
@@ -61,5 +55,120 @@
     "url": "https://github.com/TitanCSA/Browser-Control-SDK/releases/download/sdk-v0.2.0/browser-control-sdk-sdk-0.2.0.tar.gz",
     "sha256": "889c5baf8c1595fa392e425f92cd1c270655e045a7721975caebfedc7e63066d"
   },
-  "c_abi_bridge": "Browser-Control-SDK-C-ffi"
+  "c_abi_bridge": "Browser-Control-SDK-C-ffi",
+  "registry_publications": {
+    "CPP/vcpkg": {
+      "status": "published_custom_registry",
+      "registry": "https://github.com/TitanCSA/vcpkg-registry",
+      "baseline": "2a5f4f4037f5fbd911344250e43e7a1d48e04fe6",
+      "port": "browser-control-sdk-sdk",
+      "microsoft_curated_registry": false
+    },
+    "CPP/conan": {
+      "status": "public_recipe_builds_locally",
+      "conan_center": false,
+      "directory": "Browser-Control-SDK-CPP-conan",
+      "github_directory": "packaging/native"
+    },
+    "CPP/nuget": {
+      "status": "paused_pending_owner_email_confirmation",
+      "name": "Browser-Control-SDK.Native",
+      "version": "0.2.0",
+      "registry_published": false,
+      "consumer_build_verified": true,
+      "documentation_bundled": true
+    },
+    "NET/nuget": {
+      "status": "binding_not_implemented"
+    },
+    "Python/pypi": {
+      "status": "published_install_verified",
+      "name": "browser-control-sdk",
+      "version": "0.2.1",
+      "url": "https://pypi.org/project/browser-control-sdk/0.2.1/",
+      "documentation_bundled": true,
+      "examples_bundled": true,
+      "registry_published": true
+    },
+    "Python/conda-forge": {
+      "status": "submitted_pending_maintainer_review",
+      "name": "browser-control-sdk",
+      "version": "0.2.1",
+      "pull_request": "https://github.com/conda-forge/staged-recipes/pull/35612",
+      "registry_published": false,
+      "conda_build_and_tests_passed": true,
+      "custom_channel": "https://raw.githubusercontent.com/TitanCSA/sdk-packages/3bdd457537159e83157bed70f5fae70e07be0f47/conda-channel",
+      "custom_channel_install_verified": true,
+      "custom_channel_is_conda_forge": false
+    },
+    "Rust/cargo": {
+      "status": "binding_not_implemented"
+    },
+    "JavaScript/npm": {
+      "status": "published_install_verified",
+      "name": "browser-control-sdk",
+      "version": "0.2.0",
+      "directory": "Browser-Control-SDK-JavaScript-npm",
+      "documentation_bundled": true,
+      "examples_bundled": true,
+      "registry_published": true,
+      "url": "https://www.npmjs.com/package/browser-control-sdk"
+    },
+    "Java/maven": {
+      "status": "binding_not_implemented"
+    },
+    "Java/jitpack": {
+      "status": "binding_not_implemented"
+    },
+    "Go/modules": {
+      "status": "published_install_verified",
+      "name": "github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules",
+      "version": "v0.2.1",
+      "directory": "Browser-Control-SDK-Go-modules",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "url": "https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1",
+      "public_consumer_verified": true
+    },
+    "Go/pkg-go-dev": {
+      "status": "indexing_pending",
+      "url": "https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1"
+    },
+    "PowerShell/gallery": {
+      "status": "published_install_verified",
+      "name": "BrowserControlSDK",
+      "version": "0.2.1",
+      "directory": "Browser-Control-SDK-PowerShell-gallery",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "native_tests_passed": false,
+      "protocol_tests_passed": true,
+      "github_downloads": "https://github.com/TitanCSA/Browser-Control-SDK/releases/tag/powershell-sdk-v0.2.1",
+      "url": "https://www.powershellgallery.com/packages/BrowserControlSDK/0.2.1"
+    },
+    "Dart/pub-dev": {
+      "status": "published_install_verified",
+      "name": "browser_control_sdk",
+      "version": "0.2.1",
+      "directory": "Browser-Control-SDK-Dart-pub-dev",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "url": "https://pub.dev/packages/browser_control_sdk",
+      "public_consumer_verified": true
+    },
+    "Ruby/rubygems": {
+      "status": "published_install_verified",
+      "name": "browser-control-sdk",
+      "version": "0.2.2",
+      "directory": "Browser-Control-SDK-Ruby-rubygems",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "url": "https://rubygems.org/gems/browser-control-sdk",
+      "public_consumer_verified": true
+    },
+    "PHP/packagist": {
+      "status": "binding_not_implemented"
+    }
+  },
+  "coverage_note": "Missing language bindings are explicitly listed. Published GitHub archives are distinct from central registry acceptance. Local organized SDK folders are retained."
 }
