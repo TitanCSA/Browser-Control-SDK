@@ -1,7 +1,11 @@
 #pragma once
 #include <stdint.h>
 #ifdef _WIN32
+#ifdef BCS_BUILD
 #define BCS_API __declspec(dllexport)
+#else
+#define BCS_API __declspec(dllimport)
+#endif
 #else
 #define BCS_API
 #endif
