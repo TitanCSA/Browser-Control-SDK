@@ -1,28 +1,85 @@
-# SDK publication status
+# Browser-Control-SDK — SDK et installation
 
-Current source layout and registry coverage. A GitHub download is distinct from publication on a central registry.
+Projet : [Browser-Control-SDK](https://github.com/TitanCSA/Browser-Control-SDK). [Sources et documentation des SDK](https://github.com/TitanCSA/sdk-packages/tree/main/projects/Browser-Control-SDK).
 
-| Target | Status | Package / documentation |
+Choisis la ligne correspondant au langage de ton application. Installe son outil habituel (Node.js/npm, Python/pip, .NET, etc.), puis execute la commande dans le dossier de ton application. Les pilotes et applications requis restent a installer separement selon le README du projet.
+
+Les SDK natifs sont destines a Windows x64. Java utilise Java22+ (Kotlin passe par le SDK Java). Flutter utilise le SDK Dart ; le chargement de la DLL doit etre configure dans l application. AutoHotInterceptor .NET utilise .NET Framework4.8.
+
+| Langage / registre | Disponibilite | Installation / utilisation |
 | --- | --- | --- |
-| CPP/vcpkg | published_custom_registry | browser-control-sdk |
-| CPP/conan | published_custom_source_index | [browser-control-sdk](https://github.com/TitanCSA/sdk-packages/tree/089bc73095aa8eda89bacbe10d0b9e58394b0207/conan-index) [Source](packaging/native/) |
-| CPP/nuget | published_payload_verified | [Browser-Control-SDK.Native](https://www.nuget.org/packages/Browser-Control-SDK.Native/0.2.0) |
-| NET/nuget | published_payload_verified | [BrowserControlSDK.SDK](https://www.nuget.org/packages/BrowserControlSDK.SDK/1.0.0) |
-| Python/pypi | published_install_verified | [browser-control-sdk](https://pypi.org/project/browser-control-sdk/0.2.1/) |
-| Python/conda-forge | submitted_pending_maintainer_review | browser-control-sdk [Source](Browser-Control-SDK-Python-conda-forge/) |
-| Rust/cargo | published_install_verified | [browser-control-sdk](https://crates.io/crates/browser-control-sdk) [Source](Browser-Control-SDK-Rust-cargo/) |
-| JavaScript/npm | published_install_verified | [browser-control-sdk](https://www.npmjs.com/package/browser-control-sdk) [Source](Browser-Control-SDK-JavaScript-npm/) |
-| Java/maven | published_install_verified | [browser-control-sdk](https://central.sonatype.com/artifact/io.github.titancsa/browser-control-sdk/1.0.0) [Source](Browser-Control-SDK-Java-maven/) |
-| Java/jitpack | published_install_verified | [browser-control-sdk](https://jitpack.io/#TitanCSA/Browser-Control-SDK/java-sdk-v1.0.0) [Source](Browser-Control-SDK-Java-maven/) |
-| Go/modules | published_install_verified | [github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules](https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1) [Source](Browser-Control-SDK-Go-modules/) |
-| Go/pkg-go-dev | indexed_verified | [Documentation](https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1) |
-| PowerShell/gallery | published_install_verified | [BrowserControlSDK](https://www.powershellgallery.com/packages/BrowserControlSDK/0.2.1) [Source](Browser-Control-SDK-PowerShell-gallery/) |
-| Dart/pub-dev | published_install_verified | [browser_control_sdk](https://pub.dev/packages/browser_control_sdk) [Source](Browser-Control-SDK-Dart-pub-dev/) |
-| Ruby/rubygems | published_install_verified | [browser-control-sdk](https://rubygems.org/gems/browser-control-sdk) [Source](Browser-Control-SDK-Ruby-rubygems/) |
-| PHP/packagist | composer_source_and_tag_published | [titancsa/browser-control-sdk](https://packagist.org/packages/titancsa/browser-control-sdk) |
+| C++ / vcpkg | Registre TitanCSA disponible (configuration ci-dessous) | `vcpkg install browser-control-sdk:x64-windows` |
+| C++ / Conan | Registre TitanCSA disponible (configuration ci-dessous) | `conan install --requires=browser-control-sdk/0.2.0 -r titancsa --build=missing -s compiler.cppstd=17` |
+| C++ / NuGet natif | Publie et verifie | `Install-Package Browser-Control-SDK.Native -Version 0.2.0` |
+| C# / .NET | Publie et verifie | `dotnet add package BrowserControlSDK.SDK --version 1.0.0` |
+| Python / pip | Publie et verifie | `python -m pip install browser-control-sdk==0.2.1` |
+| Python / Conda | Canal TitanCSA disponible ; acceptation conda-forge encore en attente | `conda install --override-channels -c https://raw.githubusercontent.com/TitanCSA/sdk-packages/089bc73095aa8eda89bacbe10d0b9e58394b0207/conda-channel -c conda-forge browser-control-sdk` |
+| Rust / Cargo | Publie et verifie | `cargo add browser-control-sdk@1.0.0` |
+| JavaScript et TypeScript / npm | Publie et verifie | `npm install browser-control-sdk@0.2.0` |
+| Java et Kotlin / Maven Central | Publie et verifie | `io.github.titancsa:browser-control-sdk:1.0.0 (pom.xml / Gradle)` |
+| Java et Kotlin / JitPack | Publie et verifie | `com.github.TitanCSA:Browser-Control-SDK:java-sdk-v1.0.0 (avec le depot JitPack)` |
+| Go / Go Modules | Publie et verifie | `go get github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
+| Go / pkg.go.dev | Publie et verifie | `Documentation : https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
+| PowerShell / Gallery | Publie et verifie | `Install-Module BrowserControlSDK -RequiredVersion 0.2.1 -Scope CurrentUser` |
+| Dart et Flutter / pub.dev | Publie et verifie | `dart pub add browser_control_sdk:0.2.1` |
+| Ruby / RubyGems | Publie et verifie | `gem install browser-control-sdk -v 0.2.2` |
+| PHP / Composer | Pas encore disponible / validation en cours | Commande prevue apres publication : `composer require titancsa/browser-control-sdk:1.0.0` |
 
-Native SDK source and CMake/Conan/vcpkg/NuGet recipes share [`packaging/native`](packaging/native/LAYOUT.md). Previous release archives and tags remain unchanged.
+## C et C++
 
-C ABI header, import library and native DLL: [Windows x64 SDK archive](https://github.com/TitanCSA/Browser-Control-SDK/releases/tag/c-abi-sdk-v0.2.2). This GitHub archive is separate from central-registry packages.
+Les sources et headers C / C++ sont dans le dossier central de ce projet. Les headers C se trouvent dans les dossiers `*-C-ffi` ou `*-C-json` (Interceptor-MultiLang : `native/`). Les paquets natifs C++ et la disponibilite du bridge C sont distincts ; consulte leur README avant de lier une application C.
 
-Application and driver prerequisites and original licensing remain those documented by each SDK. No driver installer is bundled with these source packages.
+Pour vcpkg, ajoute un fichier `vcpkg-configuration.json` a cote de ton manifeste `vcpkg.json` :
+
+```json
+{
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/TitanCSA/vcpkg-registry",
+      "baseline": "9a706cf6992544778eb26a8b4244e303292f1ce6",
+      "packages": [
+        "browser-control-sdk",
+        "browser-control-sdk-sdk"
+      ]
+    }
+  ]
+}
+```
+
+Pour Conan2, configure une seule fois l index source :
+
+```powershell
+git clone https://github.com/TitanCSA/sdk-packages.git
+conan remote add titancsa ./sdk-packages/conan-index -t local-recipes-index
+```
+
+Execute ensuite la commande Conan du tableau. Ce registre construit les bibliotheques depuis leurs sources ; il est distinct de ConanCenter. La commande NuGet native s execute dans la console du gestionnaire de packages de Visual Studio.
+
+## Java et Kotlin
+
+Dans le bloc `<dependencies>` de ton `pom.xml` :
+
+```xml
+<dependency>
+  <groupId>io.github.titancsa</groupId>
+  <artifactId>browser-control-sdk</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+Avec Gradle Kotlin :
+
+```kotlin
+implementation("io.github.titancsa:browser-control-sdk:1.0.0")
+```
+
+Pour JitPack, ajoute aussi le depot `https://jitpack.io`, puis utilise les coordonnees du tableau. Les versions Go et JitPack deja publiees continuent de pointer vers leurs anciens tags immuables dans le depot du projet : ces tags restent disponibles. Leurs sources de travail sont maintenant centralisees ici ; aucun ancien import Go n est renomme.
+
+## Etat et documentation
+
+Les commandes marquees « prevues » ne sont pas encore des installations disponibles. Le canal Conda TitanCSA n est pas le catalogue officiel conda-forge. Les versions et licences existantes ne sont pas remplacees par cette reorganisation.
+
+Les guides API et exemples de chaque langage se trouvent dans leurs dossiers SDK, a cote des sources. Les bindings peuvent exposer une partie de l API C++ ; les limites restent documentees dans chaque SDK.
+
+[Retour au catalogue central](../../README.md)

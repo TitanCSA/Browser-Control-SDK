@@ -1,4 +1,0 @@
-!lib/native/
-!lib/native/BrowserControlBridge.dll
-.dart_tool/
-pubspec.lock
