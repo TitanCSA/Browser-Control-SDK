@@ -121,10 +121,11 @@
       "registry_published": false,
       "consumer_build_verified": true,
       "documentation_bundled": true,
-      "publication_on_hold_by_owner": true
+      "publication_on_hold_by_owner": false,
+      "nuget_publication_status": "ready_requires_trusted_publishing_policy"
     },
     "NET/nuget": {
-      "status": "built_verified_publication_on_hold_by_owner",
+      "status": "built_verified_requires_trusted_publishing_policy",
       "name": "BrowserControlSDK.SDK",
       "version": "1.0.0",
       "directory": "Browser-Control-SDK-NET-nuget",
@@ -135,7 +136,8 @@
       "module": "browser_control_sdk",
       "dll_name": "BrowserControlSDKJsonSDK.dll",
       "api_prefix": "browser_control_sdk_json_",
-      "publication_on_hold_by_owner": true
+      "publication_on_hold_by_owner": false,
+      "nuget_publication_status": "ready_requires_trusted_publishing_policy"
     },
     "Python/pypi": {
       "status": "published_install_verified",

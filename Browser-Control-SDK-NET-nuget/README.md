@@ -1,8 +1,6 @@
 # Browser-Control-SDK .NET8 SDK
 
-Package ID `BrowserControlSDK.SDK`. NuGet upload remains on hold at owner request.
-
-```csharp
+Package ID `BrowserControlSDK.SDK`. ```csharp
 using var client=new TitanCSA.Products.BrowserControlSDK.Client();
 client.Call("connect", "{}");
 string statusJson=client.Call("info", "{}");
