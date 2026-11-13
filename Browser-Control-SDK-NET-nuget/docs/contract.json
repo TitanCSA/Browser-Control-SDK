@@ -1,0 +1,1 @@
+[{"operation": "check", "arguments": {"method": "browser.info"}, "expected_key": "valid", "expected_value": true}]

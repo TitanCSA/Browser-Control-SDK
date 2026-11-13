@@ -48,6 +48,36 @@
       "name": "browser_control_sdk",
       "version": "0.2.1",
       "distribution": "Dart FFI package; Flutter deployment requires bundling the DLL as documented"
+    },
+    {
+      "directory": "Browser-Control-SDK-C-json",
+      "distribution": "Native C ABI adapter to the original project SDK",
+      "dll": "BrowserControlSDKJsonSDK.dll",
+      "api_prefix": "browser_control_sdk_json_"
+    },
+    {
+      "directory": "Browser-Control-SDK-Rust-cargo",
+      "language": "Rust",
+      "registry": "cargo",
+      "name": "browser-control-sdk",
+      "version": "1.0.0",
+      "distribution": "Documented native SDK; registry receipt tracked independently"
+    },
+    {
+      "directory": "Browser-Control-SDK-Java-maven",
+      "language": "Java",
+      "registry": "maven",
+      "name": "browser-control-sdk",
+      "version": "1.0.0",
+      "distribution": "Documented native SDK; registry receipt tracked independently"
+    },
+    {
+      "directory": "Browser-Control-SDK-NET-nuget",
+      "language": "NET",
+      "registry": "nuget",
+      "name": "BrowserControlSDK.SDK",
+      "version": "1.0.0",
+      "distribution": "Documented native SDK; registry receipt tracked independently"
     }
   ],
   "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented.",
