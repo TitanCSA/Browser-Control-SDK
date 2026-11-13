@@ -24,11 +24,6 @@
       "distribution": "GitHub source and downloadable release artifacts"
     },
     {
-      "directory": "Browser-Control-SDK-Python-conda-forge",
-      "central_registry_status": "not_published",
-      "distribution": "GitHub source and downloadable release artifacts"
-    },
-    {
       "directory": "Browser-Control-SDK-Ruby-rubygems",
       "registry": "RubyGems",
       "name": "browser-control-sdk",
@@ -78,6 +73,12 @@
       "name": "BrowserControlSDK.SDK",
       "version": "1.0.0",
       "distribution": "Documented native SDK; registry receipt tracked independently"
+    },
+    {
+      "directory": "Browser-Control-SDK-Python-conda-forge",
+      "language": "Python",
+      "registry": "conda-forge",
+      "distribution": "Source-build recipe; official review and custom channel availability reported separately"
     }
   ],
   "notes": "Registry accounts or community acceptance are separate. No missing language binding is represented as implemented.",
@@ -90,7 +91,7 @@
     "CPP/vcpkg": {
       "status": "published_custom_registry",
       "registry": "https://github.com/TitanCSA/vcpkg-registry",
-      "baseline": "33fd43f72d7137f6ebaac4c1eeab001f66bf3a98",
+      "baseline": "9a706cf6992544778eb26a8b4244e303292f1ce6",
       "port": "browser-control-sdk",
       "microsoft_curated_registry": false,
       "legacy_port": "browser-control-sdk-sdk",
@@ -103,6 +104,8 @@
       "status": "public_recipe_builds_locally",
       "conan_center": false,
       "directory": "Browser-Control-SDK-CPP-conan",
+      "local_recipe_consumer_verified": true,
+      "minimum_cppstd": 17,
       "github_directory": "packaging/native"
     },
     "CPP/nuget": {
@@ -111,10 +114,22 @@
       "version": "0.2.0",
       "registry_published": false,
       "consumer_build_verified": true,
-      "documentation_bundled": true
+      "documentation_bundled": true,
+      "publication_on_hold_by_owner": true
     },
     "NET/nuget": {
-      "status": "binding_not_implemented"
+      "status": "built_verified_publication_on_hold_by_owner",
+      "name": "BrowserControlSDK.SDK",
+      "version": "1.0.0",
+      "directory": "Browser-Control-SDK-NET-nuget",
+      "registry_published": false,
+      "documentation_bundled": true,
+      "url": null,
+      "public_consumer_verified": false,
+      "module": "browser_control_sdk",
+      "dll_name": "BrowserControlSDKJsonSDK.dll",
+      "api_prefix": "browser_control_sdk_json_",
+      "publication_on_hold_by_owner": true
     },
     "Python/pypi": {
       "status": "published_install_verified",
@@ -134,10 +149,25 @@
       "conda_build_and_tests_passed": true,
       "custom_channel": "https://raw.githubusercontent.com/TitanCSA/sdk-packages/3bdd457537159e83157bed70f5fae70e07be0f47/conda-channel",
       "custom_channel_install_verified": true,
-      "custom_channel_is_conda_forge": false
+      "custom_channel_is_conda_forge": false,
+      "recipe_format": "v1",
+      "v1_source_build_tests_passed": true,
+      "personal_maintainer_confirmation_required": true,
+      "official_review_status": "v1_recipe_prepared_requires_submission_or_existing_pr_update",
+      "github_directory": "Browser-Control-SDK-Python-conda-forge"
     },
     "Rust/cargo": {
-      "status": "binding_not_implemented"
+      "status": "published_install_verified",
+      "name": "browser-control-sdk",
+      "version": "1.0.0",
+      "directory": "Browser-Control-SDK-Rust-cargo",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "url": "https://crates.io/crates/browser-control-sdk",
+      "public_consumer_verified": true,
+      "module": "browser_control_sdk",
+      "dll_name": "BrowserControlSDKJsonSDK.dll",
+      "api_prefix": "browser_control_sdk_json_"
     },
     "JavaScript/npm": {
       "status": "published_install_verified",
@@ -150,10 +180,34 @@
       "url": "https://www.npmjs.com/package/browser-control-sdk"
     },
     "Java/maven": {
-      "status": "binding_not_implemented"
+      "status": "published_install_verified",
+      "name": "browser-control-sdk",
+      "version": "1.0.0",
+      "directory": "Browser-Control-SDK-Java-maven",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "url": "https://central.sonatype.com/artifact/io.github.titancsa/browser-control-sdk/1.0.0",
+      "public_consumer_verified": true,
+      "module": "browser_control_sdk",
+      "dll_name": "BrowserControlSDKJsonSDK.dll",
+      "api_prefix": "browser_control_sdk_json_",
+      "coordinates": "io.github.titancsa:browser-control-sdk:1.0.0",
+      "java_package": "titancsa.products.browser_control_sdk"
     },
     "Java/jitpack": {
-      "status": "binding_not_implemented"
+      "status": "published_install_verified",
+      "name": "browser-control-sdk",
+      "version": "java-sdk-v1.0.0",
+      "directory": "Browser-Control-SDK-Java-maven",
+      "registry_published": true,
+      "documentation_bundled": true,
+      "url": "https://jitpack.io/#TitanCSA/Browser-Control-SDK/java-sdk-v1.0.0",
+      "public_consumer_verified": true,
+      "module": "browser_control_sdk",
+      "dll_name": "BrowserControlSDKJsonSDK.dll",
+      "api_prefix": "browser_control_sdk_json_",
+      "coordinates": "com.github.TitanCSA:Browser-Control-SDK:java-sdk-v1.0.0",
+      "java_package": "titancsa.products.browser_control_sdk"
     },
     "Go/modules": {
       "status": "published_install_verified",
@@ -163,7 +217,8 @@
       "registry_published": true,
       "documentation_bundled": true,
       "url": "https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1",
-      "public_consumer_verified": true
+      "public_consumer_verified": true,
+      "module": "github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules"
     },
     "Go/pkg-go-dev": {
       "status": "indexed_verified",
@@ -202,7 +257,18 @@
       "public_consumer_verified": true
     },
     "PHP/packagist": {
-      "status": "binding_not_implemented"
+      "status": "composer_source_and_tag_published",
+      "name": "titancsa/browser-control-sdk",
+      "version": "1.0.0",
+      "directory": "Browser-Control-SDK-PHP-packagist",
+      "registry_published": false,
+      "documentation_bundled": true,
+      "url": "https://packagist.org/packages/titancsa/browser-control-sdk",
+      "public_consumer_verified": false,
+      "module": "browser_control_sdk",
+      "dll_name": "BrowserControlSDKJsonSDK.dll",
+      "api_prefix": "browser_control_sdk_json_",
+      "repository": "https://github.com/TitanCSA/browser-control-sdk-php"
     }
   },
   "coverage_note": "Missing language bindings are explicitly listed. Published GitHub archives are distinct from central registry acceptance. Local organized SDK folders are retained.",
