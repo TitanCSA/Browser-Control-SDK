@@ -205,28 +205,28 @@ to operate and follow the rules of the services you access. Supplied as-is; see
 the license for warranty terms. Contact: **Discord `titancsa`**.
 
 <!-- central-sdk-packages:start -->
-## SDK : langages et installation
+## Paquets et installation
 
-Les sources, licences, guides API et exemples sont regroupes dans [le depot SDK dedie](https://github.com/TitanCSA/sdk-packages/tree/main/projects/Browser-Control-SDK). Choisis le langage de ton application puis execute sa commande dans son dossier.
+Les sources, licences, guides API et exemples sont regroupes dans [le depot SDK dedie](https://github.com/TitanCSA/sdk-packages/tree/main/projects/Browser-Control-SDK). Choisis le paquet a installer puis execute sa commande dans son dossier.
 
-| Langage / registre | Disponibilite | Installation / utilisation |
-| --- | --- | --- |
-| C++ / vcpkg | Registre TitanCSA disponible (configuration ci-dessous) | `vcpkg install browser-control-sdk:x64-windows` |
-| C++ / Conan | Registre TitanCSA disponible (configuration ci-dessous) | `conan install --requires=browser-control-sdk/0.2.0 -r titancsa --build=missing -s compiler.cppstd=17` |
-| C++ / NuGet natif | Publie et verifie | `Install-Package Browser-Control-SDK.Native -Version 0.2.0` |
-| C# / .NET | Publie et verifie | `dotnet add package BrowserControlSDK.SDK --version 1.0.0` |
-| Python / pip | Publie et verifie | `python -m pip install browser-control-sdk==0.2.1` |
-| Python / Conda | Canal TitanCSA disponible ; acceptation conda-forge encore en attente | `conda install --override-channels -c https://raw.githubusercontent.com/TitanCSA/sdk-packages/089bc73095aa8eda89bacbe10d0b9e58394b0207/conda-channel -c conda-forge browser-control-sdk` |
-| Rust / Cargo | Publie et verifie | `cargo add browser-control-sdk@1.0.0` |
-| JavaScript et TypeScript / npm | Publie et verifie | `npm install browser-control-sdk@0.2.1` |
-| Java et Kotlin / Maven Central | Publie et verifie | `io.github.titancsa:browser-control-sdk:1.0.0 (pom.xml / Gradle)` |
-| Java et Kotlin / JitPack | Publie et verifie | `com.github.TitanCSA:Browser-Control-SDK:java-sdk-v1.0.0 (avec le depot JitPack)` |
-| Go / Go Modules | Publie et verifie | `go get github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
-| Go / pkg.go.dev | Publie et verifie | `Documentation : https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
-| PowerShell / Gallery | Publie et verifie | `Install-Module BrowserControlSDK -RequiredVersion 0.2.1 -Scope CurrentUser` |
-| Dart et Flutter / pub.dev | Publie et verifie | `dart pub add browser_control_sdk:0.2.1` |
-| Ruby / RubyGems | Publie et verifie | `gem install browser-control-sdk -v 0.2.2` |
-| PHP / Composer | Pas encore disponible / validation en cours | Commande prevue apres publication : `composer require titancsa/browser-control-sdk:1.0.0` |
+| Paquet | Registre | Disponibilite | Installation / utilisation |
+| --- | --- | --- | --- |
+| `browser-control-sdk` | vcpkg | Registre TitanCSA disponible (configuration ci-dessous) | `vcpkg install browser-control-sdk:x64-windows` |
+| `browser-control-sdk` | Conan | Registre TitanCSA disponible (configuration ci-dessous) | `conan install --requires=browser-control-sdk/0.2.0 -r titancsa --build=missing -s compiler.cppstd=17` |
+| `Browser-Control-SDK.Native` | NuGet | Publie et verifie | `Install-Package Browser-Control-SDK.Native -Version 0.2.0` |
+| `BrowserControlSDK.SDK` | NuGet | Publie et verifie | `dotnet add package BrowserControlSDK.SDK --version 1.0.0` |
+| `browser-control-sdk` | PyPI | Publie et verifie | `python -m pip install browser-control-sdk==0.2.1` |
+| `browser-control-sdk` | Conda | Canal TitanCSA disponible ; acceptation conda-forge encore en attente | `conda install --override-channels -c https://raw.githubusercontent.com/TitanCSA/sdk-packages/089bc73095aa8eda89bacbe10d0b9e58394b0207/conda-channel -c conda-forge browser-control-sdk` |
+| `browser_control_sdk` | crates.io | Publie et verifie | `cargo add browser-control-sdk@1.0.0` |
+| `browser-control-sdk` | npm | Publie et verifie | `npm install browser-control-sdk@0.2.1` |
+| `io.github.titancsa:browser-control-sdk` | Maven Central | Publie et verifie | `io.github.titancsa:browser-control-sdk:1.0.0 (pom.xml / Gradle)` |
+| `com.github.TitanCSA:Browser-Control-SDK` | JitPack | Publie et verifie | `com.github.TitanCSA:Browser-Control-SDK:java-sdk-v1.0.0 (avec le depot JitPack)` |
+| `github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules` | Go Modules | Publie et verifie | `go get github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
+| `github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules` | pkg.go.dev | Publie et verifie | `Documentation : https://pkg.go.dev/github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
+| `BrowserControlSDK` | PowerShell Gallery | Publie et verifie | `Install-Module BrowserControlSDK -RequiredVersion 0.2.1 -Scope CurrentUser` |
+| `browser_control_sdk` | pub.dev | Publie et verifie | `dart pub add browser_control_sdk:0.2.1` |
+| `browser-control-sdk` | RubyGems | Publie et verifie | `gem install browser-control-sdk -v 0.2.2` |
+| `browser_control_sdk` | Packagist | Pas encore disponible / validation en cours | Commande prevue apres publication : `composer require titancsa/browser-control-sdk:1.0.0` |
 
 Pour vcpkg et Conan, configure d abord le registre TitanCSA avec [le guide complet](https://github.com/TitanCSA/sdk-packages/tree/main/projects/Browser-Control-SDK/README.md). Le guide explique aussi Maven/Gradle, les prerequis et le chargement des DLL. Les pilotes/applications du produit sont installes separement. Les commandes marquees prevues ne sont pas encore disponibles.
 
