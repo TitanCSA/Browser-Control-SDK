@@ -6,7 +6,7 @@ Current source layout and registry coverage. A GitHub download is distinct from 
 | --- | --- | --- |
 | CPP/vcpkg | published_custom_registry | browser-control-sdk |
 | CPP/conan | published_custom_source_index | [browser-control-sdk](https://github.com/TitanCSA/sdk-packages/tree/089bc73095aa8eda89bacbe10d0b9e58394b0207/conan-index) [Source](packaging/native/) |
-| CPP/nuget | paused_pending_owner_email_confirmation | Browser-Control-SDK.Native |
+| CPP/nuget | account_email_confirmed_requires_matching_trusted_publishing_policy | Browser-Control-SDK.Native |
 | NET/nuget | built_verified_requires_trusted_publishing_policy | BrowserControlSDK.SDK [Source](Browser-Control-SDK-NET-nuget/) |
 | Python/pypi | published_install_verified | [browser-control-sdk](https://pypi.org/project/browser-control-sdk/0.2.1/) |
 | Python/conda-forge | submitted_pending_maintainer_review | browser-control-sdk [Source](Browser-Control-SDK-Python-conda-forge/) |
