@@ -4,6 +4,7 @@ Package ID `BrowserControlSDK.SDK`. NuGet upload remains on hold at owner reques
 
 ```csharp
 using var client=new TitanCSA.Products.BrowserControlSDK.Client();
+client.Call("connect", "{}");
 string statusJson=client.Call("info", "{}");
 ```
 

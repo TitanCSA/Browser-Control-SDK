@@ -4,6 +4,7 @@ Maven coordinate `io.github.titancsa:browser-control-sdk:1.0.0`. Java22+ Windows
 
 ```java
 try(var client=new titancsa.products.browser_control_sdk.Client()){
+  client.call("connect", "{}");
   String response=client.call("info", "{}");
 }
 ```

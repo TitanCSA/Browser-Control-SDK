@@ -7,6 +7,7 @@ Windows x64 MSVC Rust1.82+. Bundled DLL/import library; copy native DLL beside d
 ```rust,no_run
 use browser_control_sdk::Client;
 let mut client=Client::new()?;
+client.call("connect",serde_json::json!({}))?;
 let result=client.call("info",serde_json::json!({}))?;
 # Ok::<(),Box<dyn std::error::Error>>(())
 ```
