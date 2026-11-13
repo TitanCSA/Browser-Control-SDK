@@ -115,29 +115,28 @@
       "github_directory": "packaging/native"
     },
     "CPP/nuget": {
-      "status": "account_email_confirmed_requires_matching_trusted_publishing_policy",
+      "status": "published_payload_verified",
       "name": "Browser-Control-SDK.Native",
       "version": "0.2.0",
-      "registry_published": false,
-      "consumer_build_verified": true,
+      "url": "https://www.nuget.org/packages/Browser-Control-SDK.Native/0.2.0",
+      "public_payload_verified": true,
+      "public_consumer_verified": false,
+      "local_consumer_verified": true,
+      "registry_published": true,
       "documentation_bundled": true,
-      "publication_on_hold_by_owner": false,
-      "nuget_publication_status": "ready_requires_trusted_publishing_policy"
+      "publication_on_hold_by_owner": false
     },
     "NET/nuget": {
-      "status": "built_verified_requires_trusted_publishing_policy",
+      "status": "published_payload_verified",
       "name": "BrowserControlSDK.SDK",
       "version": "1.0.0",
-      "directory": "Browser-Control-SDK-NET-nuget",
-      "registry_published": false,
-      "documentation_bundled": true,
-      "url": null,
+      "url": "https://www.nuget.org/packages/BrowserControlSDK.SDK/1.0.0",
+      "public_payload_verified": true,
       "public_consumer_verified": false,
-      "module": "browser_control_sdk",
-      "dll_name": "BrowserControlSDKJsonSDK.dll",
-      "api_prefix": "browser_control_sdk_json_",
-      "publication_on_hold_by_owner": false,
-      "nuget_publication_status": "ready_requires_trusted_publishing_policy"
+      "local_consumer_verified": true,
+      "registry_published": true,
+      "documentation_bundled": true,
+      "publication_on_hold_by_owner": false
     },
     "Python/pypi": {
       "status": "published_install_verified",
@@ -185,7 +184,9 @@
       "documentation_bundled": true,
       "examples_bundled": true,
       "registry_published": true,
-      "url": "https://www.npmjs.com/package/browser-control-sdk"
+      "url": "https://www.npmjs.com/package/browser-control-sdk",
+      "typescript_patch_status": "typescript_patch_built_consumer_verified_requires_publication",
+      "typescript_patch_version": "0.2.1"
     },
     "Java/maven": {
       "status": "published_install_verified",
