@@ -85,9 +85,9 @@
       "registry_published": true,
       "name": "browser-control-sdk",
       "version": "0.2.0",
-      "url": "https://github.com/TitanCSA/sdk-packages/tree/089bc73095aa8eda89bacbe10d0b9e58394b0207/conan-index",
+      "url": "https://github.com/TitanCSA/sdk-packages/tree/776bbd32e2dd7c1ffb484bea0121ef6558af3069/conan-index",
       "index_type": "local-recipes-index",
-      "index_commit": "089bc73095aa8eda89bacbe10d0b9e58394b0207",
+      "index_commit": "776bbd32e2dd7c1ffb484bea0121ef6558af3069",
       "github_directory": "packaging/native"
     },
     "CPP/nuget": {
@@ -154,14 +154,15 @@
     "JavaScript/npm": {
       "status": "published_install_verified",
       "name": "browser-control-sdk",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "directory": "Browser-Control-SDK-JavaScript-npm",
       "documentation_bundled": true,
       "examples_bundled": true,
       "registry_published": true,
       "url": "https://www.npmjs.com/package/browser-control-sdk",
-      "typescript_patch_status": "submitted_requires_indexing",
-      "typescript_patch_version": "0.2.1"
+      "typescript_patch_status": "published_install_verified",
+      "typescript_patch_version": "0.2.1",
+      "public_consumer_verified": true
     },
     "Java/maven": {
       "status": "published_install_verified",

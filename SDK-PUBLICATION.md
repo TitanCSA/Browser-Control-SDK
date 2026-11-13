@@ -15,7 +15,7 @@ Les SDK natifs sont destines a Windows x64. Java utilise Java22+ (Kotlin passe p
 | Python / pip | Publie et verifie | `python -m pip install browser-control-sdk==0.2.1` |
 | Python / Conda | Canal TitanCSA disponible ; acceptation conda-forge encore en attente | `conda install --override-channels -c https://raw.githubusercontent.com/TitanCSA/sdk-packages/089bc73095aa8eda89bacbe10d0b9e58394b0207/conda-channel -c conda-forge browser-control-sdk` |
 | Rust / Cargo | Publie et verifie | `cargo add browser-control-sdk@1.0.0` |
-| JavaScript et TypeScript / npm | Publie et verifie | `npm install browser-control-sdk@0.2.0` |
+| JavaScript et TypeScript / npm | Publie et verifie | `npm install browser-control-sdk@0.2.1` |
 | Java et Kotlin / Maven Central | Publie et verifie | `io.github.titancsa:browser-control-sdk:1.0.0 (pom.xml / Gradle)` |
 | Java et Kotlin / JitPack | Publie et verifie | `com.github.TitanCSA:Browser-Control-SDK:java-sdk-v1.0.0 (avec le depot JitPack)` |
 | Go / Go Modules | Publie et verifie | `go get github.com/TitanCSA/Browser-Control-SDK/Browser-Control-SDK-Go-modules@v0.2.1` |
