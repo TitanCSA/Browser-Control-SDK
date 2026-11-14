@@ -106,6 +106,12 @@ Optional generation/URL guards reject outdated plans. MCP **`browser_observe`**
 and **`browser_act`** can use the active tab without a tab-list call.
 See the [AI examples](Examples/README.md).
 
+`max_elements` limits returned controls. `max_text` limits only the returned
+page-text field in UTF-8 bytes, not tokens. Names, values, URLs and other metadata
+add to the response size. The top-level `truncated` flag records element/text
+reductions made by the native response filter; it is not a completeness flag for
+every individual field. See the [native observation filter](App/Host.cpp).
+
 ## Sign in once, keep the session
 
 A human can sign in normally in a persistent profile. Its cookies and site
@@ -144,6 +150,13 @@ is **untrusted website content**, not an instruction source. Snapshot refs belon
 to one document/snapshot generation; take a fresh snapshot after navigation or a
 stale-ref error. Screenshots include the web page, rather than the user's entire
 desktop.
+
+The [current snapshot script](App/DomScripts.h) caps individual non-sensitive
+field values at 4,000 UTF-16 code units. For a long standard text control, use an
+explicit `evaluate()` call with a known selector to read its complete `.value`,
+or use the application's export. Virtualised editors may render only part of a
+document. Read the complete source before rewriting a document, then verify the
+saved result.
 
 ## Sessions and operation results
 
