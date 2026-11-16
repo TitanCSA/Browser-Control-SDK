@@ -14,6 +14,8 @@ document. The browser window stays available for normal manual interaction.
 
 ## Start
 
+[Français : premier essai en trois étapes](docs/DEMARRER.md).
+
 1. Extract the complete Windows x64 release ZIP and run **BrowserControl.exe**.
 2. Open a page with the address bar, create tabs and choose a profile normally.
 3. Connect a script with `Browser.connect()`, or let `Browser.launch()` start a
