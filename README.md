@@ -24,35 +24,63 @@ The browser uses the **Microsoft Edge WebView2 Evergreen Runtime**. Many Windows
 download page. The browser does not silently install a runtime. No administrator
 rights or input driver are required.
 
-### A complete small Python example
+### Your first script
 
-Python 3.10+; the SDK itself uses only Python's standard library:
+Install the client with Python 3.10+:
 
 ```powershell
-python -m pip install ./SDK/Python
-python Tests/fixture_server.py --port 8765
+python -m pip install browser-control-sdk
 ```
 
-In another terminal, run:
+The package installs the SDK client. **Download and open BrowserControl.exe first** using step 1 above; the SDK package does not install the browser or WebView2.
+
+Save the following as `first_browser.py`, then run `python first_browser.py`:
 
 ```python
 from browser_control import Browser
 
-browser = Browser.connect()      # Connect to the browser opened in step 1.
+browser = Browser.connect()
+tab = browser.new_tab()
+tab.goto("https://example.com")
+print(tab.snapshot()["text"])
+tab.screenshot(path="first-page.png")
+```
+
+Expected result: a new browser tab opens Example Domain, its visible text appears in your terminal, and `first-page.png` is saved in the current folder. The browser remains open for manual use.
+
+**JavaScript client:** `npm install browser-control-sdk`. See the [JavaScript SDK examples](SDK/README.md) and the package table below for other clients. Installing a client never installs a product driver.
+
+### Learn form interaction on a local page
+
+For clicks, typing and selectors, clone or download the source repository and run its owned demonstration server:
+
+```powershell
+python Tests/fixture_server.py --port 8765
+```
+
+In another terminal:
+
+```python
+from browser_control import Browser
+
+browser = Browser.connect()
 tab = browser.new_tab()
 tab.goto("http://127.0.0.1:8765")
 tab.fill("Ada", selector="#name")
 tab.click(selector="#save")
 print(tab.snapshot()["text"])
-tab.screenshot(path="page.png", full_page=True)
 ```
 
-This example stays on the supplied local demonstration page. Use selectors you
-know, or take a snapshot and click an element's returned `ref`. The SDK preserves
-request IDs, infers framing lengths, waits for operations and raises detailed
-English errors. Call `browser.shutdown()` to close that instance explicitly.
-To start the browser from code instead, use `Browser.launch()` before opening it
-manually, or supply a separate private `profile_root` for another instance.
+For other pages, take a snapshot and use an observed element's returned `ref`, name or role. Call `browser.shutdown()` only when you want to close that browser instance. To launch an instance from code, use `Browser.launch()` with the installed browser executable; a separate `profile_root` provides an isolated profile.
+
+### If the first connection fails
+
+| Symptom | Next step |
+| --- | --- |
+| `No module named browser_control` | Use `python -m pip install browser-control-sdk` with the same Python used to run the script. |
+| No running browser instance is found | Open the extracted `BrowserControl.exe`, wait for its window, then rerun the script under the same Windows user. |
+| WebView2 is missing | Follow the application's official Microsoft runtime download link, then reopen the browser. |
+| The local demonstration page does not load | Keep `fixture_server.py` running and use its printed localhost address. This server is only needed for the form example. |
 
 ## What you can control
 
