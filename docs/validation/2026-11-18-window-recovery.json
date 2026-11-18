@@ -1,0 +1,144 @@
+{
+  "recorded_utc": "2026-11-18T14:46:32.655454+00:00",
+  "version": "0.2.1",
+  "scope": "Real owned localhost integration fixture, isolated profile, Windows x64; no third-party account or user input. Not general website/security/endurance qualification.",
+  "exe_sha256": "d9696279f7e6b9bb1a0dfd863bbcce4493d1358eb580c1b305c8dbc67b8c1b03",
+  "webview_runtime": "157.0.4341.60",
+  "passed": true,
+  "cases": [
+    {
+      "name": "Semantic snapshot, labels, state and secret-field redaction",
+      "passed": true,
+      "ms": 4.73
+    },
+    {
+      "name": "Reference click/fill, checkbox and real input events",
+      "passed": true,
+      "ms": 63.63
+    },
+    {
+      "name": "Focused typing and keyboard shortcut/events",
+      "passed": true,
+      "ms": 11.23
+    },
+    {
+      "name": "CSS-coordinate mouse movement, click and wheel",
+      "passed": true,
+      "ms": 181.19
+    },
+    {
+      "name": "Asynchronous DOM wait without a fixed page sleep",
+      "passed": true,
+      "ms": 282.8
+    },
+    {
+      "name": "Detached snapshot references are rejected",
+      "passed": true,
+      "ms": 8.23
+    },
+    {
+      "name": "Viewport, full-page and selected-region screenshots",
+      "passed": true,
+      "ms": 137.98
+    },
+    {
+      "name": "Minimized screenshot fails promptly and capture recovers after restore",
+      "passed": true,
+      "ms": 76.27
+    },
+    {
+      "name": "Invalid window state leaves geometry and visibility unchanged",
+      "passed": true,
+      "ms": 1.09
+    },
+    {
+      "name": "Explicit live-region frame iterator reflects page changes",
+      "passed": true,
+      "ms": 30.58
+    },
+    {
+      "name": "Window, viewport and native browser settings",
+      "passed": true,
+      "ms": 15.62
+    },
+    {
+      "name": "Explicit SDK cookie creation and HttpOnly semantics",
+      "passed": true,
+      "ms": 3.58
+    },
+    {
+      "name": "Explicit local/session storage roundtrip and clear",
+      "passed": true,
+      "ms": 4.24
+    },
+    {
+      "name": "Independent profile cookies and SDK cookie clearing",
+      "passed": true,
+      "ms": 681.33
+    },
+    {
+      "name": "Case-safe profile directories and private context isolation",
+      "passed": true,
+      "ms": 1023.92
+    },
+    {
+      "name": "Explicit download configuration, byte content and tracking",
+      "passed": true,
+      "ms": 67.64
+    },
+    {
+      "name": "Website external-application launches blocked and redacted",
+      "passed": true,
+      "ms": 82.17
+    },
+    {
+      "name": "Navigation/history and document-scoped references",
+      "passed": true,
+      "ms": 99.21
+    },
+    {
+      "name": "Explicit renderer CDP command",
+      "passed": true,
+      "ms": 2.42
+    },
+    {
+      "name": "Invalid local capability token refused",
+      "passed": true,
+      "ms": 3.46
+    },
+    {
+      "name": "Bounded concurrent clients preserve response identity",
+      "passed": true,
+      "ms": 7.32
+    },
+    {
+      "name": "Measured local SDK/renderer roundtrip",
+      "passed": true,
+      "ms": 17.42
+    }
+  ],
+  "local_roundtrip_ms": {
+    "samples": 30,
+    "median": 0.503,
+    "p95": 0.997,
+    "scope": "SDK pipe + UI dispatch + trivial renderer JS; not network or website latency"
+  },
+  "other_verified_suites": {
+    "native_ipc_and_vault_ctest": {
+      "tests": 2,
+      "passed": 2
+    },
+    "offline_sdk_mcp": {
+      "tests": 26,
+      "passed": 26
+    }
+  },
+  "known_separate_failed_trials": {
+    "minimized_repeated_pointer_cycles": [
+      104,
+      108
+    ],
+    "one_hour_completed": false,
+    "reason": "Expected owned form outcome was absent; keep restored and verify postconditions. See docs/VALIDATION.md."
+  }
+}

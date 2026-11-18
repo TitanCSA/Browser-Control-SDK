@@ -12,7 +12,7 @@ website login or real credential was used.
 | Native IPC | 9 passed | Framing, authentication, version/timeout bounds, JSON limits, restricted-token refusal, queued cancellation, strict-deadline partial receipts and shutdown/endpoint cleanup |
 | Native credential vault | 8 passed | DPAPI roundtrip, origin/profile isolation, explicit autofill preference, corruption without reset, size limits and deletion/reopen |
 | Offline SDK / MCP | 26 passed | Requests, identities, discovery, lazy startup, finite plans, stale guards, partial results and metadata-only login tools |
-| Actual browser integration | 20 passed | Forms, semantic refs, keyboard/mouse events, async DOM waits, screenshots/live regions, layout, cookies/storage, profile isolation, downloads, navigation, CDP, external-protocol blocking and concurrent clients |
+| Actual browser integration | 22 passed (18 November 2026) | Forms, semantic refs, keyboard/mouse events, async DOM waits, screenshots/live regions, minimize/restore recovery, validation before window mutation, layout, cookies/storage, profile isolation, downloads, navigation, CDP, external-protocol blocking and concurrent clients |
 | Actual AI / login integration | 11 passed | Compact plans, timeout receipts, native save consent, encrypted storage, fill/no-submit, origin/profile isolation, optional autofill, ambiguity refusal, explicit submission, cookie/vault reuse across restart and deletion |
 | Other live clients | Node, C++ and MCP passed | Compact observations, semantic plans, guarded/failed batches and metadata-only login status; actual MCP timeout reports one completed click without replay |
 | Concurrent workload | 1,200 requests, 0 errors | Four clients: 400 browser-info requests, 400 renderer evaluations and 400 semantic snapshots |
@@ -59,6 +59,18 @@ The GitHub workflow builds Windows x64 and runs the native/offline suites. It do
 not automatically open websites or run the interactive integration suite.
 
 ## Boundaries
+
+The [18 November regression record](validation/2026-11-18-window-recovery.json) contains the binary hash, runtime and individual case results. The window regression run verifies that a minimized screenshot
+returns `window_minimized` promptly, a state-only restore preserves the normal
+dimensions, and the same browser can capture again after restoration. An invalid
+window state is rejected before geometry or visibility changes.
+
+Separate minimized-window repeated-input trials did **not** qualify that path:
+one stopped after 104 completed cycles on a form-result mismatch; a second
+stopped after 108 completed cycles when the expected result did not arrive within
+the explicit wait. Neither is a completed one-hour endurance result. Keep the
+window restored for pointer input and capture. Verify a form's own postcondition;
+a dispatch receipt alone is not proof of application-level completion.
 
 These checks establish the tested behavior, not freedom from every bug or
 compatibility with every site, Windows configuration or future engine version.

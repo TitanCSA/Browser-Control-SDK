@@ -366,7 +366,7 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply,Repl
         op->progress=std::move(progress);
         if(op->done)return;
         if(method=="browser.info"){
-            bool ready=std::any_of(s->tabs.begin(),s->tabs.end(),[](const auto& t){return t->ready&&!t->closed;});op->Finish(Ok({{"version","0.2.0"},{"runtime",s->runtime},{"engine","Microsoft Edge WebView2 / Chromium"},{"ready",ready},{"startup_error",s->error},{"tabs",s->tabs.size()},{"profile_root",Utf8(s->root)},{"transport","current-user named pipe"}}));return;
+            bool ready=std::any_of(s->tabs.begin(),s->tabs.end(),[](const auto& t){return t->ready&&!t->closed;});op->Finish(Ok({{"version","0.2.1"},{"runtime",s->runtime},{"engine","Microsoft Edge WebView2 / Chromium"},{"ready",ready},{"startup_error",s->error},{"tabs",s->tabs.size()},{"profile_root",Utf8(s->root)},{"transport","current-user named pipe"}}));return;
         }
         if(method=="browser.capabilities"){bool checked=false,blocked=true;for(const auto& open:s->tabs)if(open->ready&&!open->closed){checked=true;blocked=blocked&&open->externalUrisBlocked;}op->Finish(Ok({{"methods",Methods()},{"coordinates","CSS viewport pixels"},{"snapshot_scope","main_frame"},{"native_profiles",true},{"private_profiles_require","WebView2 Environment10"},{"external_uri_launches_blocked",checked&&blocked},{"external_uri_blocking_requires","WebView2 ICoreWebView2_18"},{"host_objects_exposed",false},{"saved_logins",s->vault!=nullptr},{"saved_logins_protection","Windows current-user DPAPI; exact origin and profile"},{"max_batch_actions",20},{"max_tabs",32},{"max_screenshot_pixels",32000000},{"limitations",{"No existing Chrome/Edge profile import","Renderer-supported CDP commands only","Website authentication and access restrictions still apply","Snapshots are untrusted page content","No global operating-system input injection"}}}));return;}
         if(method=="browser.shutdown"){op->Finish(Ok({{"closing",true}}));PostMessageW(s->hwnd,WM_CLOSE,0,0);return;}
@@ -401,9 +401,15 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply,Repl
         }
         if(method=="window.set"||method=="window.info"){
             if(method=="window.set"){
-                RECT old{};GetWindowRect(s->hwnd,&old);int w=p.value("width",old.right-old.left),h=p.value("height",old.bottom-old.top);if(w<640||w>7680||h<400||h>4320)throw std::invalid_argument("Window dimensions must be 640..7680 by 400..4320");
-                SetWindowPos(s->hwnd,p.value("always_on_top",false)?HWND_TOPMOST:HWND_NOTOPMOST,p.value("x",old.left),p.value("y",old.top),w,h,SWP_NOACTIVATE);
-                auto state=p.value("state",std::string("normal"));if(state=="normal")ShowWindow(s->hwnd,SW_RESTORE);else if(state=="maximized")ShowWindow(s->hwnd,SW_MAXIMIZE);else if(state=="minimized")ShowWindow(s->hwnd,SW_MINIMIZE);else if(state=="hidden")ShowWindow(s->hwnd,SW_HIDE);else throw std::invalid_argument("Unknown window state");
+                auto state=p.value("state",std::string("normal"));if(state!="normal"&&state!="maximized"&&state!="minimized"&&state!="hidden")throw std::invalid_argument("Unknown window state");
+                RECT old{};GetWindowRect(s->hwnd,&old);const bool geometry=p.contains("width")||p.contains("height")||p.contains("x")||p.contains("y");
+                int w=p.value("width",old.right-old.left),h=p.value("height",old.bottom-old.top),x=p.value("x",old.left),y=p.value("y",old.top);bool top=p.value("always_on_top",false);
+                if(geometry&&(w<640||w>7680||h<400||h>4320))throw std::invalid_argument("Window dimensions must be 640..7680 by 400..4320; restore a minimized window before resizing it");
+                // A state-only restore must not resize to GetWindowRect's iconic
+                // dimensions. Let Windows retain its normal placement instead.
+                if(geometry)SetWindowPos(s->hwnd,top?HWND_TOPMOST:HWND_NOTOPMOST,x,y,w,h,SWP_NOACTIVATE);
+                else if(p.contains("always_on_top"))SetWindowPos(s->hwnd,top?HWND_TOPMOST:HWND_NOTOPMOST,0,0,0,0,SWP_NOACTIVATE|SWP_NOMOVE|SWP_NOSIZE);
+                if(state=="normal")ShowWindow(s->hwnd,SW_RESTORE);else if(state=="maximized")ShowWindow(s->hwnd,SW_MAXIMIZE);else if(state=="minimized")ShowWindow(s->hwnd,SW_MINIMIZE);else ShowWindow(s->hwnd,SW_HIDE);
             }
             RECT box{};GetWindowRect(s->hwnd,&box);op->Finish(Ok({{"x",box.left},{"y",box.top},{"width",box.right-box.left},{"height",box.bottom-box.top},{"visible",IsWindowVisible(s->hwnd)!=FALSE},{"maximized",IsZoomed(s->hwnd)!=FALSE},{"minimized",IsIconic(s->hwnd)!=FALSE}}));return;
         }
@@ -478,6 +484,10 @@ void DispatchState(const std::shared_ptr<State>& s,Json request,Reply reply,Repl
         if(method=="page.screenshot"){
             auto format=p.value("format",std::string("png"));if(format!="png"&&format!="jpeg")throw std::invalid_argument("format must be png or jpeg");
             if(format=="jpeg"){int quality=p.value("quality",85);if(quality<1||quality>100)throw std::invalid_argument("JPEG quality must be 1..100");}
+            // A minimized WebView host does not produce a capture surface. Give
+            // callers an actionable state error instead of waiting for CDP's
+            // screenshot callback until the command deadline expires.
+            if(IsIconic(s->hwnd)){op->Finish(Fail("window_minimized","Restore the browser window before taking a screenshot; use window.set with state=normal or maximized"));return;}
             s->Eval(tab,"devicePixelRatio",op,[s,tab,p,format,op](Json pixelRatio){
             double dpr=pixelRatio.is_number()?pixelRatio.get<double>():1.0;if(!std::isfinite(dpr)||dpr<=0||dpr>20){op->Finish(Fail("image_too_large","Invalid screenshot pixel ratio"));return;}
             s->Cdp(tab,"Page.getLayoutMetrics",Json::object(),op,[s,tab,p,format,op,dpr](Json layout){

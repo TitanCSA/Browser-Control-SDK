@@ -50,6 +50,7 @@ Un onglet s'ouvre dans Browser Control, le texte de la page apparaît dans le te
 | `No module named browser_control` | Installez le paquet avec le même `python` que celui qui exécute le script. |
 | Aucun navigateur actif n'est trouvé | Ouvrez BrowserControl.exe, attendez sa fenêtre et lancez le script avec le même compte Windows. |
 | Aucun fichier PNG dans le dossier attendu | La capture est enregistrée dans le dossier courant du terminal, qui peut différer du dossier du script. |
+| `window_minimized` lors d’une capture | Restaurez explicitement la fenêtre avec `navigateur.window(state="normal")`, puis activez l’onglet avec `onglet.activate()` avant une nouvelle capture. |
 | Une connexion à un site est demandée | Connectez-vous normalement dans le profil Browser Control choisi. Les profils Chrome et Edge existants ne sont pas importés. |
 
 ## Étape suivante : formulaires et clics

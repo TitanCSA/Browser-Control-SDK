@@ -110,6 +110,13 @@ The SDKs share one protocol:
 | AI clients | [Local stdio MCP server](MCP/README.md), including screenshot image responses |
 | Other languages | [Length-prefixed UTF-8 JSON protocol](Protocol/API.md) over a private Windows named pipe |
 
+For screenshots and frame capture, keep the browser window restored and activate
+the intended tab. A minimized window reports `window_minimized`; call
+`browser.window(state="normal")` explicitly before trying again. Page actions
+that already completed are not repeated automatically.
+These window recovery fixes are in application version 0.2.1; for an earlier
+binary, restore its window manually or update. See [changes](CHANGELOG.md).
+
 Typed helpers cover common actions. `browser.call(method, params)` and the C++
 `Call()` equivalent expose the rest without adding another integration layer.
 `browser.capabilities()` reports the implemented methods and engine boundaries.

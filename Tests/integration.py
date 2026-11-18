@@ -136,6 +136,40 @@ def main():
             require(clip==(320,180),'Region image dimensions differ')
         case('Viewport, full-page and selected-region screenshots',screenshots)
 
+        def minimized_capture():
+            original=browser.window()
+            browser.window(state='minimized')
+            try:
+                started=time.perf_counter()
+                try:
+                    tab.screenshot(timeout_ms=7000)
+                except BrowserError as error:
+                    require(error.code=='window_minimized','Minimized capture did not return its actionable state error')
+                    require(time.perf_counter()-started<5,'Minimized capture waited instead of failing promptly')
+                else:
+                    raise AssertionError('Minimized host unexpectedly accepted a surface capture')
+            finally:
+                browser.window(state='normal')
+                tab.activate()
+            restored=browser.window()
+            require(not restored['minimized'],'State-only restore left the browser minimized')
+            require((restored['width'],restored['height'])==(original['width'],original['height']),'State-only restore changed the normal window dimensions')
+            tab.screenshot(path=out/'restored-window.png',clip={'x':0,'y':0,'width':320,'height':120})
+            require(dimensions(out/'restored-window.png')==(320,120),'Capture did not recover after restoring the same browser')
+        case('Minimized screenshot fails promptly and capture recovers after restore',minimized_capture)
+
+        def invalid_window_state():
+            original=browser.window()
+            try:
+                browser.window(state='invalid-state',width=1100,height=800,x=100,y=100)
+            except BrowserError as error:
+                require(error.code=='invalid_argument','Unknown window state did not fail validation')
+            else:
+                raise AssertionError('Unknown window state was accepted')
+            current=browser.window()
+            require(all(current[k]==original[k] for k in ['x','y','width','height','minimized','maximized','visible']),'Invalid window state changed the window before validation')
+        case('Invalid window state leaves geometry and visibility unchanged',invalid_window_state)
+
         def live_frames():
             stream=tab.frames(interval_ms=0,clip={'x':0,'y':0,'width':400,'height':100})
             tab.evaluate('document.querySelector("h1").textContent="Live frame one"')
