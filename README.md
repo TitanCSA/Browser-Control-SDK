@@ -1,5 +1,10 @@
 # Browser Control SDK - Windows Browser for AI and Automation
 
+> [!IMPORTANT]
+> **Contact TitanCSA**
+>
+> On [Discord](https://discord.com/app), choose **Friends → Add Friend**, enter **`titancsa`** and send the project name. Ask about commercial licensing, integration or support for this project.
+
 A native **Windows Chromium browser** built to be controlled through a small SDK.
 Open tabs, work with separate profiles, read a page as structured elements, click
 and type, change the viewport, and capture the visible page, a region or the full
