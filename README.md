@@ -1,5 +1,11 @@
 # Browser Control SDK - Windows Browser for AI and Automation
 
+<!-- simple-start:start -->
+Open a Windows browser that you can use yourself or control from a script.
+
+**Start here.** Extract the release ZIP and launch BrowserControl.exe. Open a page as you would in any browser.
+<!-- simple-start:end -->
+
 > [!IMPORTANT]
 > **Contact TitanCSA**
 >
