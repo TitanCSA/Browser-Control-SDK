@@ -3,7 +3,7 @@
 <!-- simple-start:start -->
 Open a Windows browser that you can use yourself or control from a script.
 
-**Start here.** Extract the release ZIP and launch BrowserControl.exe. Open a page as you would in any browser.
+**Start here.** Extract the [Windows ZIP](https://github.com/TitanCSA/Browser-Control-SDK/releases/latest) and open **BrowserControl.exe**. Use the address bar to open a page. If prompted, install Microsoft Edge WebView2. [Run a first Python test](https://titancsa.github.io/guides/first-run/#browser).
 <!-- simple-start:end -->
 
 > [!IMPORTANT]
