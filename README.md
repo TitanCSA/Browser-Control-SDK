@@ -11,9 +11,9 @@ Extract the [Windows ZIP](https://github.com/TitanCSA/Browser-Control-SDK/releas
 <!-- simple-start:end -->
 
 > [!IMPORTANT]
-> **Contact TitanCSA**
+> **Optional integration and support**
 >
-> On [Discord](https://discord.com/app), choose **Friends → Add Friend**, enter **`titancsa`** and send the project name. Ask about commercial licensing, integration or support for this project.
+> Browser Control SDK and its SDKs are available under the MIT licence. For optional integration or support, add **`titancsa`** on [Discord](https://discord.com/app) and mention **Browser Control SDK**.
 
 A native **Windows Chromium browser** built to be controlled through a small SDK.
 Open tabs, work with separate profiles, read a page as structured elements, click
